@@ -1,5 +1,8 @@
 # staybook
 
+[![License: MIT](https://img.shields.io/github/license/AshwinM-134/staybook)](LICENSE)
+[![Java 21](https://img.shields.io/badge/Java-21-blue)](pom.xml)
+
 Staybook is a hotel booking system, like Booking.com or Airbnb. Each level is built by hand.
 The point is to learn system design by meeting each problem for real and fixing it, not by reading about it.
 
