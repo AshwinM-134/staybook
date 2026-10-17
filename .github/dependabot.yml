@@ -22,3 +22,8 @@ updates:
     commit-message:
       prefix: chore
       include: scope
+    # CodeQL refuses a run when init and analyze are on different versions.
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action*"
