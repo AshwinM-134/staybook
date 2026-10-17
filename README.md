@@ -13,9 +13,6 @@ The point is to learn system design by meeting each problem for real and fixing 
 
 [`docs/architecture/`](docs/architecture/) holds snapshots of the design board.
 
-[`docs/levels.md`](docs/levels.md) is the level guide. It has the level 0
-design, the HTTP contract the exit gates call, and the levels in order.
-
 ## CI
 
 [![build](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=build&label=build)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
@@ -57,6 +54,13 @@ also has the commit and pull request rules.
 
 ## Running locally
 
+You need:
+
+- JDK 21. CI uses Temurin 21. `./mvnw` downloads Maven, so you do not
+  need to install it.
+- Docker with Compose. The tests start their own Postgres through
+  Testcontainers, so `./mvnw verify` needs Docker too.
+
 Start Postgres and the mock gateway. `--wait` returns when both
 healthchecks pass:
 
@@ -94,6 +98,10 @@ Run one level on its own. Level 0 fails until the
 ```bash
 ./mvnw verify -Dgroups=level0 -DexcludedGroups=
 ```
+
+The `exit-gate` job runs the same command.
+[`docs/levels.md`](docs/levels.md) is the level guide. It has the level 0
+design, the HTTP contract the exit gates call, and the levels in order.
 
 `./mvnw verify` runs PMD, Checkstyle (Google style), SpotBugs, and
 Spotless. Format Java with:
