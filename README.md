@@ -32,9 +32,9 @@ One Spring Boot app, one Postgres database, and a mock payment gateway running o
 | `users` | id, username (unique), email (unique), password_hash, created_at, last_logged_in |
 | `hotel` | id, owner_id → users, name, city, address |
 | `room_type` | id, hotel_id → hotel, name, capacity |
-| `inventory` | room_type_id → room_type, date, total, reserved. Primary key (room_type_id, date), `reserved <= total` |
+| `inventory` | room_type_id → room_type, date, total, reserved. Primary key (room_type_id, date), `reserved >= 0`, `reserved <= total` |
 | `rate` | room_type_id → room_type, date, price |
-| `booking` | id, user_id → users, room_type_id → room_type, check_in, check_out, guests, total_price_paise, status, idempotency_key (unique), hold_expires_at, created_at |
+| `booking` | id, user_id → users, room_type_id → room_type, check_in, check_out, guests, total_price_paise, status, idempotency_key (unique), request_hash, hold_expires_at, created_at |
 | `payment` | id, booking_id → booking, amount_paise, payment_type, status, provider_ref (unique), idempotency_key, created_at |
 
 Booking status is one of `HELD`, `CONFIRMED_UNPAID`, `PAID`, `CANCELLED`, `EXPIRED`. One booking can have many payments, because a failed attempt can be retried.
@@ -42,6 +42,20 @@ Booking status is one of `HELD`, `CONFIRMED_UNPAID`, `PAID`, `CANCELLED`, `EXPIR
 Money is integer paise, never a decimal. `booking.total_price_paise` and `payment.amount_paise` are `bigint`. ₹1500 is `150000`.
 
 Reviews and amenities (`review`, `amenity`, `hotel_amenity`) come in at level 1.
+
+### What V1 must contain
+
+Ash's schema is the first migration,
+`src/main/resources/db/migration/V1__init.sql`. The exit-gate fixtures
+insert rows straight into the tables above, so the table and column
+names must match. The gates also expect these in V1:
+
+- `booking.request_hash`, a `text NOT NULL` hash of the booking
+  request. It tells a retry of the same request apart from a different
+  request that reuses the `idempotencyKey`.
+- `CHECK (reserved >= 0)` on `inventory`.
+- `CHECK (reserved <= total)` on `inventory`.
+- `bigint` for `booking.total_price_paise` and `payment.amount_paise`.
 
 ### Holding a room
 
@@ -175,14 +189,20 @@ It does not insert a second booking, and it does not increment
 `reserved` again. Ten concurrent calls with one key do the same: one
 booking row, one increment, and that same id on every response.
 
+The same `idempotencyKey` with a different request body returns `422`.
+It inserts no booking and leaves `reserved` unchanged.
+
 `POST /api/bookings/{id}/release` returns `204`. It subtracts 1 from
-`reserved` on every night that booking covered.
+`reserved` on every night that booking covered. A second release of
+the same booking also returns `204` and changes nothing, so `reserved`
+never goes below 0.
 
-### Check constraint
+### Check constraints
 
-`inventory.reserved` cannot exceed `inventory.total`. The database
-rejects that row with a check constraint. The level 0 gate inserts one
-and expects SQLSTATE `23514`.
+`inventory.reserved` stays between 0 and `inventory.total`. The
+database rejects a row outside that range with a check constraint. The
+level 0 gates insert one row above `total` and one below 0, and expect
+SQLSTATE `23514` for each.
 
 ### Gateway and webhook
 

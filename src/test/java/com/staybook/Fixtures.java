@@ -92,8 +92,8 @@ final class Fixtures {
     Long id =
         jdbc.queryForObject(
             "insert into booking (user_id, room_type_id, check_in, check_out, guests,"
-                + " total_price_paise, status, idempotency_key, hold_expires_at, created_at)"
-                + " values (?, ?, ?, ?, ?, ?, ?, ?, ?, now()) returning id",
+                + " total_price_paise, status, idempotency_key, request_hash, hold_expires_at,"
+                + " created_at) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, now()) returning id",
             Long.class,
             userId,
             roomTypeId,
@@ -103,6 +103,7 @@ final class Fixtures {
             TOTAL_PRICE_PAISE,
             status,
             idempotencyKey,
+            "fixture-" + idempotencyKey,
             Timestamp.from(Instant.parse("2026-12-20T12:00:00Z")));
     return id == null ? 0L : id;
   }

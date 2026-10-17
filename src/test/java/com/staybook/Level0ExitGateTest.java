@@ -56,6 +56,19 @@ class Level0ExitGateTest extends ExitGateSupport {
   }
 
   @Test
+  void negativeReservedIsRejected() {
+    long userId = Fixtures.insertUser(jdbc());
+    long hotelId = Fixtures.insertHotel(jdbc(), userId);
+    long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
+    LocalDate night = LocalDate.of(2026, 12, 20);
+    DataIntegrityViolationException failure =
+        assertThrows(
+            DataIntegrityViolationException.class,
+            () -> Fixtures.insertInventory(jdbc(), roomTypeId, night, 1, -1));
+    assertEquals("23514", sqlState(failure));
+  }
+
+  @Test
   void holdIncrementsReservedOnEachNight() {
     long userId = Fixtures.insertUser(jdbc());
     LocalDate checkIn = LocalDate.of(2026, 12, 20);
@@ -103,6 +116,39 @@ class Level0ExitGateTest extends ExitGateSupport {
     for (LocalDate night = checkIn; night.isBefore(checkOut); night = night.plusDays(1)) {
       assertEquals(0, Fixtures.reserved(jdbc(), roomTypeId, night), night.toString());
     }
+  }
+
+  @Test
+  void aSecondReleaseIsANoOpAndReservedNeverGoesNegative() {
+    long userId = Fixtures.insertUser(jdbc());
+    LocalDate checkIn = LocalDate.of(2026, 12, 20);
+    int nights = 2;
+    LocalDate checkOut = checkIn.plusDays(nights);
+    long roomTypeId = insertNights(userId, checkIn, nights, 5, 0);
+    HttpResponse created = postBooking(userId, roomTypeId, checkIn, checkOut, "release-twice");
+    assertEquals(201, created.status());
+    long bookingId = read(created).get("id").asLong();
+    release(bookingId);
+    release(bookingId);
+    for (LocalDate night = checkIn; night.isBefore(checkOut); night = night.plusDays(1)) {
+      assertEquals(0, Fixtures.reserved(jdbc(), roomTypeId, night), night.toString());
+    }
+  }
+
+  @Test
+  void theSameIdempotencyKeyWithADifferentBodyReturns422() {
+    long userId = Fixtures.insertUser(jdbc());
+    LocalDate checkIn = LocalDate.of(2026, 12, 20);
+    long roomTypeId = insertNights(userId, checkIn, 2, 5, 0);
+    HttpResponse first =
+        postBooking(userId, roomTypeId, checkIn, checkIn.plusDays(1), "reused-key");
+    HttpResponse second =
+        postBooking(userId, roomTypeId, checkIn, checkIn.plusDays(2), "reused-key");
+    assertEquals(201, first.status());
+    assertEquals(422, second.status());
+    assertEquals(1, Fixtures.countBookings(jdbc()));
+    assertEquals(1, Fixtures.reserved(jdbc(), roomTypeId, checkIn));
+    assertEquals(0, Fixtures.reserved(jdbc(), roomTypeId, checkIn.plusDays(1)));
   }
 
   @Test
