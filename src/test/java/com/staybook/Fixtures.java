@@ -8,7 +8,7 @@ import java.time.LocalDate;
 import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** JDBC fixtures. No schema lives here; a missing table fails the calling test. */
+/** Inserts rows only. Schema lives in V1__init.sql. A missing table fails the test. */
 final class Fixtures {
 
   private Fixtures() {}

@@ -14,7 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.test.web.reactive.server.WebTestClient.RequestBodySpec;
 
-class ExitGateHarness {
+class ExitGateSupport {
 
   private final ObjectMapper mapper = new ObjectMapper();
 
@@ -40,26 +40,32 @@ class ExitGateHarness {
     return migrations;
   }
 
-  final void warmup() {
+  final void openTheConnectionPool() {
     client.get().uri("/api/hotels/1").exchange().expectBody().returnResult();
   }
 
-  final HttpExchange postJson(String uri, String json) {
-    return exchange(client.post().uri(uri), json, false);
+  final HttpResponse postJson(String uri, String json) {
+    return exchange(client.post().uri(uri), json);
   }
 
-  final HttpExchange postBooking(
-      long userId,
-      long roomTypeId,
-      LocalDate checkIn,
-      LocalDate checkOut,
-      String idempotencyKey,
-      boolean insideTransaction) {
-    String json = bookingJson(userId, roomTypeId, checkIn, checkOut, idempotencyKey);
-    return exchange(client.post().uri("/api/bookings"), json, insideTransaction);
+  final HttpResponse postBooking(
+      long userId, long roomTypeId, LocalDate checkIn, LocalDate checkOut, String idempotencyKey) {
+    return exchange(
+        client.post().uri("/api/bookings"),
+        bookingJson(userId, roomTypeId, checkIn, checkOut, idempotencyKey));
   }
 
-  final HttpExchange postWebhook(String json, String signature) {
+  final HttpResponse postBookingCallingGatewayInsideTheTransaction(
+      long userId, long roomTypeId, LocalDate checkIn, LocalDate checkOut, String idempotencyKey) {
+    RequestBodySpec spec =
+        client
+            .post()
+            .uri("/api/bookings")
+            .header("X-Staybook-Call-Gateway-Inside-Transaction", "true");
+    return exchange(spec, bookingJson(userId, roomTypeId, checkIn, checkOut, idempotencyKey));
+  }
+
+  final HttpResponse postWebhook(String json, String signature) {
     var result =
         client
             .post()
@@ -70,7 +76,7 @@ class ExitGateHarness {
             .exchange()
             .expectBody(byte[].class)
             .returnResult();
-    return new HttpExchange(result.getStatus().value(), result.getResponseBody());
+    return new HttpResponse(result.getStatus().value(), result.getResponseBody());
   }
 
   final void release(long bookingId) {
@@ -82,56 +88,47 @@ class ExitGateHarness {
         .isNoContent();
   }
 
-  final JsonNode read(HttpExchange exchange) {
+  final JsonNode read(HttpResponse response) {
     try {
-      return mapper.readTree(exchange.body());
+      return mapper.readTree(response.body());
     } catch (IOException ex) {
       throw new UncheckedIOException(ex);
     }
   }
 
-  final HttpExchange getJson(String uri) {
+  final HttpResponse getJson(String uri) {
     var result = client.get().uri(uri).exchange().expectBody(byte[].class).returnResult();
-    return new HttpExchange(result.getStatus().value(), result.getResponseBody());
+    return new HttpResponse(result.getStatus().value(), result.getResponseBody());
   }
 
   final void getNotFound(String uri) {
     client.get().uri(uri).exchange().expectStatus().isNotFound();
   }
 
-  final HttpExchange putJson(String uri, String json) {
-    return exchange(client.put().uri(uri), json, false);
+  final HttpResponse putJson(String uri, String json) {
+    return exchange(client.put().uri(uri), json);
   }
 
   final void deleteNoContent(String uri) {
     client.delete().uri(uri).exchange().expectStatus().isNoContent();
   }
 
-  private HttpExchange exchange(RequestBodySpec spec, String json, boolean insideTransaction) {
-    if (insideTransaction) {
-      spec.header("X-Staybook-Call-Gateway-Inside-Transaction", "true");
-    }
+  private HttpResponse exchange(RequestBodySpec spec, String json) {
     var result =
         spec.contentType(MediaType.APPLICATION_JSON)
             .bodyValue(json)
             .exchange()
             .expectBody(byte[].class)
             .returnResult();
-    return new HttpExchange(result.getStatus().value(), result.getResponseBody());
+    return new HttpResponse(result.getStatus().value(), result.getResponseBody());
   }
 
   private static String bookingJson(
       long userId, long roomTypeId, LocalDate checkIn, LocalDate checkOut, String idempotencyKey) {
-    return "{\"userId\":"
-        + userId
-        + ",\"roomTypeId\":"
-        + roomTypeId
-        + ",\"checkIn\":\""
-        + checkIn
-        + "\",\"checkOut\":\""
-        + checkOut
-        + "\",\"guests\":2,\"idempotencyKey\":\""
-        + idempotencyKey
-        + "\"}";
+    return """
+        {"userId":%d,"roomTypeId":%d,"checkIn":"%s",\
+        "checkOut":"%s","guests":2,"idempotencyKey":"%s"}\
+        """
+        .formatted(userId, roomTypeId, checkIn, checkOut, idempotencyKey);
   }
 }

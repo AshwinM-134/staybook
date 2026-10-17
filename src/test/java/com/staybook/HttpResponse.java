@@ -1,12 +1,11 @@
 package com.staybook;
 
-/** Status and body from one HTTP call. */
-final class HttpExchange {
+final class HttpResponse {
 
   private final int statusCode;
   private final byte[] payload;
 
-  HttpExchange(int code, byte[] responseBody) {
+  HttpResponse(int code, byte[] responseBody) {
     statusCode = code;
     payload = responseBody == null ? new byte[0] : responseBody.clone();
   }

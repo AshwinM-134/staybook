@@ -11,6 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntFunction;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,7 +21,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 @Tag("level2")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-class Level2ExitGateTest extends ExitGateHarness {
+class Level2ExitGateTest extends ExitGateSupport {
 
   private static final int OVERBOOK_ATTEMPTS = 100;
   private static final int ROOM_TOTAL = 5;
@@ -29,20 +30,20 @@ class Level2ExitGateTest extends ExitGateHarness {
 
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
-    PostgresSupport.register(registry);
+    SharedPostgres.register(registry);
   }
 
   @Test
-  void parallelSameIdempotencyKeyCreatesOneBooking() throws Exception {
+  void tenParallelCallsWithOneKeyCreateOneBooking() throws Exception {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
     LocalDate night = LocalDate.of(2026, 12, 20);
     Fixtures.insertInventory(jdbc(), roomTypeId, night, ROOM_TOTAL, 0);
-    warmup();
-    List<HttpExchange> responses = burst(10, userId, roomTypeId, night, "shared-key");
+    openTheConnectionPool();
+    List<HttpResponse> responses = burst(10, userId, roomTypeId, night, call -> "shared-key");
     long bookingId = read(responses.get(0)).get("id").asLong();
-    for (HttpExchange response : responses) {
+    for (HttpResponse response : responses) {
       assertEquals(201, response.status());
       assertEquals(bookingId, read(response).get("id").asLong());
     }
@@ -51,17 +52,18 @@ class Level2ExitGateTest extends ExitGateHarness {
   }
 
   @Test
-  void concurrentBookingsDoNotOverbook() throws Exception {
+  void oneHundredHoldsOnFiveRoomsAcceptFiveAndRejectTheRest() throws Exception {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
     LocalDate night = LocalDate.of(2026, 12, 20);
     Fixtures.insertInventory(jdbc(), roomTypeId, night, ROOM_TOTAL, 0);
-    warmup();
+    openTheConnectionPool();
     int created = 0;
     int conflict = 0;
     int index = 0;
-    for (HttpExchange response : burst(OVERBOOK_ATTEMPTS, userId, roomTypeId, night, null)) {
+    for (HttpResponse response :
+        burst(OVERBOOK_ATTEMPTS, userId, roomTypeId, night, call -> "book-" + call)) {
       if (response.status() == CREATED) {
         created++;
       } else if (response.status() == CONFLICT) {
@@ -76,23 +78,24 @@ class Level2ExitGateTest extends ExitGateHarness {
     assertEquals(ROOM_TOTAL, Fixtures.reserved(jdbc(), roomTypeId, night));
   }
 
-  private List<HttpExchange> burst(
-      int threads, long userId, long roomTypeId, LocalDate night, String sharedKey)
+  private List<HttpResponse> burst(
+      int threads, long userId, long roomTypeId, LocalDate night, IntFunction<String> keyForCall)
       throws Exception {
     CyclicBarrier barrier = new CyclicBarrier(threads);
-    List<Future<HttpExchange>> futures = new ArrayList<>();
+    List<Future<HttpResponse>> futures = new ArrayList<>();
     try (ExecutorService pool = Executors.newFixedThreadPool(threads)) {
       for (int i = 0; i < threads; i++) {
-        String key = sharedKey == null ? "book-" + i : sharedKey;
+        int call = i;
         futures.add(
             pool.submit(
                 () -> {
                   barrier.await(30, TimeUnit.SECONDS);
-                  return postBooking(userId, roomTypeId, night, night.plusDays(1), key, false);
+                  return postBooking(
+                      userId, roomTypeId, night, night.plusDays(1), keyForCall.apply(call));
                 }));
       }
-      List<HttpExchange> responses = new ArrayList<>();
-      for (Future<HttpExchange> future : futures) {
+      List<HttpResponse> responses = new ArrayList<>();
+      for (Future<HttpResponse> future : futures) {
         responses.add(future.get(30, TimeUnit.SECONDS));
       }
       return responses;

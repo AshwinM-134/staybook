@@ -14,13 +14,13 @@ class SmokeTest {
 
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
-    PostgresSupport.register(registry);
+    SharedPostgres.register(registry);
   }
 
   @Autowired private ApplicationContext context;
 
   @Test
-  void contextLoads() {
+  void theApplicationContextStartsAgainstPostgres() {
     assertNotNull(context);
   }
 }

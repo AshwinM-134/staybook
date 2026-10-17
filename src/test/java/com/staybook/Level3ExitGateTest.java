@@ -15,6 +15,7 @@ import java.security.GeneralSecurityException;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
@@ -35,7 +36,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 @Tag("level3")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
-class Level3ExitGateTest extends ExitGateHarness {
+class Level3ExitGateTest extends ExitGateSupport {
 
   private static final String WEBHOOK_SECRET = "test-webhook-secret";
   private static final int GATEWAY_DELAY_MILLIS = 5000;
@@ -45,14 +46,15 @@ class Level3ExitGateTest extends ExitGateHarness {
 
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
-    PostgresSupport.register(registry);
-    registry.add("staybook.payment.gateway-base-url", Level3ExitGateTest::gatewayBaseUrl);
+    SharedPostgres.register(registry);
+    registry.add(
+        "staybook.payment.gateway-base-url", Level3ExitGateTest::startGatewayAndReturnBaseUrl);
     registry.add("staybook.payment.webhook-secret", () -> WEBHOOK_SECRET);
   }
 
   @BeforeAll
-  static void ensureGateway() {
-    gatewayBaseUrl();
+  static void startGateway() {
+    startGatewayAndReturnBaseUrl();
   }
 
   @AfterAll
@@ -68,8 +70,8 @@ class Level3ExitGateTest extends ExitGateHarness {
   }
 
   @Test
-  void duplicateSignedWebhookIsIdempotent() throws Exception {
-    long bookingId = seedBooking("CONFIRMED_UNPAID", "webhook-booking");
+  void fiveIdenticalSignedWebhooksLeaveOnePaidPayment() throws Exception {
+    long bookingId = insertBooking("CONFIRMED_UNPAID", "webhook-booking");
     String body = webhookBody(bookingId, "order_123", "pay-1");
     String signature = sign(body);
     CyclicBarrier barrier = new CyclicBarrier(5);
@@ -93,22 +95,22 @@ class Level3ExitGateTest extends ExitGateHarness {
   }
 
   @Test
-  void badSignatureIsRejected() throws Exception {
-    long bookingId = seedBooking("CONFIRMED_UNPAID", "bad-signature-booking");
+  void badSignatureReturns401AndWritesNothing() throws Exception {
+    long bookingId = insertBooking("CONFIRMED_UNPAID", "bad-signature-booking");
     String body = webhookBody(bookingId, "order_bad", "pay-bad");
-    HttpExchange response = postWebhook(body, "00");
+    HttpResponse response = postWebhook(body, "00");
     assertEquals(401, response.status());
     assertEquals(0, Fixtures.countPayments(jdbc()));
     assertEquals("CONFIRMED_UNPAID", Fixtures.bookingStatus(jdbc(), bookingId));
   }
 
   @Test
-  void slowGatewayDoesNotBlockTheSecondBooking() throws Exception {
-    NightStay stay = seedNight(2);
-    warmup();
+  void bothHoldsCommitWithinOneSecondWhileTheGatewaySleeps() throws Exception {
+    NightStay stay = insertNight(2);
+    openTheConnectionPool();
     wireMock.resetRequests();
     try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
-      Future<HttpExchange> first =
+      Future<HttpResponse> first =
           pool.submit(
               () ->
                   postBooking(
@@ -116,9 +118,8 @@ class Level3ExitGateTest extends ExitGateHarness {
                       stay.roomTypeId(),
                       stay.night(),
                       stay.night().plusDays(1),
-                      "slow-1",
-                      false));
-      Future<HttpExchange> second =
+                      "slow-1"));
+      Future<HttpResponse> second =
           pool.submit(
               () ->
                   postBooking(
@@ -126,8 +127,7 @@ class Level3ExitGateTest extends ExitGateHarness {
                       stay.roomTypeId(),
                       stay.night(),
                       stay.night().plusDays(1),
-                      "slow-2",
-                      false));
+                      "slow-2"));
       assertTrue(reservedReaches(stay, 2, Duration.ofSeconds(1)));
       assertEquals(201, first.get(20, TimeUnit.SECONDS).status());
       assertEquals(201, second.get(20, TimeUnit.SECONDS).status());
@@ -137,12 +137,21 @@ class Level3ExitGateTest extends ExitGateHarness {
   }
 
   @Test
-  void gatewayInsideTransactionBlocksSecondBooking() throws Exception {
-    NightStay stay = seedNight(2);
-    warmup();
+  void gatewayCallInsideTheTransactionLeavesReservedBelowTwoForOneSecond() throws Exception {
+    NightStay stay = insertNight(2);
+    openTheConnectionPool();
     wireMock.resetRequests();
     try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
-      Future<HttpExchange> first =
+      Future<HttpResponse> first =
+          pool.submit(
+              () ->
+                  postBookingCallingGatewayInsideTheTransaction(
+                      stay.userId(),
+                      stay.roomTypeId(),
+                      stay.night(),
+                      stay.night().plusDays(1),
+                      "ctrl-1"));
+      Future<HttpResponse> second =
           pool.submit(
               () ->
                   postBooking(
@@ -150,18 +159,7 @@ class Level3ExitGateTest extends ExitGateHarness {
                       stay.roomTypeId(),
                       stay.night(),
                       stay.night().plusDays(1),
-                      "ctrl-1",
-                      true));
-      Future<HttpExchange> second =
-          pool.submit(
-              () ->
-                  postBooking(
-                      stay.userId(),
-                      stay.roomTypeId(),
-                      stay.night(),
-                      stay.night().plusDays(1),
-                      "ctrl-2",
-                      false));
+                      "ctrl-2"));
       assertFalse(reservedReaches(stay, 2, Duration.ofSeconds(1)));
       assertEquals(201, first.get(20, TimeUnit.SECONDS).status());
       assertEquals(201, second.get(20, TimeUnit.SECONDS).status());
@@ -170,7 +168,7 @@ class Level3ExitGateTest extends ExitGateHarness {
     wireMock.verify(2, postRequestedFor(urlEqualTo(ORDERS)));
   }
 
-  private NightStay seedNight(int total) {
+  private NightStay insertNight(int total) {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
@@ -179,7 +177,7 @@ class Level3ExitGateTest extends ExitGateHarness {
     return new NightStay(userId, roomTypeId, night);
   }
 
-  private long seedBooking(String status, String idempotencyKey) {
+  private long insertBooking(String status, String idempotencyKey) {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
@@ -201,13 +199,11 @@ class Level3ExitGateTest extends ExitGateHarness {
   }
 
   private static String webhookBody(long bookingId, String providerRef, String idempotencyKey) {
-    return "{\"providerRef\":\""
-        + providerRef
-        + "\",\"bookingId\":"
-        + bookingId
-        + ",\"amount\":1500,\"paymentType\":\"card\",\"idempotencyKey\":\""
-        + idempotencyKey
-        + "\"}";
+    return """
+        {"providerRef":"%s","bookingId":%d,"amount":1500,\
+        "paymentType":"card","idempotencyKey":"%s"}\
+        """
+        .formatted(providerRef, bookingId, idempotencyKey);
   }
 
   private static String sign(String body) {
@@ -215,13 +211,14 @@ class Level3ExitGateTest extends ExitGateHarness {
       Mac mac = Mac.getInstance("HmacSHA256");
       mac.init(new SecretKeySpec(WEBHOOK_SECRET.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
       byte[] raw = mac.doFinal(body.getBytes(StandardCharsets.UTF_8));
-      return java.util.HexFormat.of().formatHex(raw);
+      return HexFormat.of().formatHex(raw);
     } catch (GeneralSecurityException ex) {
       throw new IllegalStateException(ex);
     }
   }
 
-  private static synchronized String gatewayBaseUrl() {
+  // Spring reads gateway-base-url while the context starts, which can be before @BeforeAll.
+  private static synchronized String startGatewayAndReturnBaseUrl() {
     if (wireMock == null) {
       wireMock = new WireMockServer(wireMockConfig().dynamicPort());
       wireMock.start();

@@ -120,6 +120,7 @@ jobs:
   exit-gate:
     name: exit-gate
     runs-on: ubuntu-latest
+    # Red until the level 0 schema and contract exist. A red result does not fail the workflow.
     continue-on-error: true
     steps:
       - name: Checkout
@@ -131,4 +132,5 @@ jobs:
           java-version: "21"
           cache: maven
       - name: Level 0 exit gate
+        # The pom excludes level0 unless this empty value replaces that default.
         run: ./mvnw -B verify -Dgroups=level0 -DexcludedGroups=

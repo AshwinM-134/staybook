@@ -1,12 +1,12 @@
 # staybook
 
-A hotel booking system (think Booking.com or Airbnb), built by hand one level at a time: from a single Spring Boot and Postgres monolith at level 0, up through concurrency, payments, microservices, caching, search and load balancing.
+Staybook is a hotel booking system, like Booking.com or Airbnb. Each level is built by hand. Level 0 is one Spring Boot app and one Postgres database. Later levels add concurrency, payments, microservices, caching, search, and load balancing.
 
 The point is to learn system design by meeting each problem for real and fixing it, not by reading about it.
 
 ![Level 0 architecture](docs/architecture/level-0.svg)
 
-The live design is on the [Hotel Booking System board](https://www.tldraw.com/f/qtsxGM0vwAG2muaGMI4pF) in tldraw. That board is the source of truth; the files in [`docs/architecture/`](docs/architecture/) are snapshots of it.
+The live design is on the [Hotel Booking System board](https://www.tldraw.com/f/qtsxGM0vwAG2muaGMI4pF) in tldraw. That board is the source of truth. The files in [`docs/architecture/`](docs/architecture/) are snapshots of it.
 
 ## Level 0: the monolith
 
@@ -57,7 +57,7 @@ If the number of rows updated equals the number of nights, insert the booking an
 
 ### Payments
 
-The gateway (Razorpay or Stripe later, a mock for now) is an external system behind a `PaymentGateway` interface. Payment creates an order, the guest pays on the gateway's page, and the gateway calls our webhook. The webhook can arrive late, twice, or never, so it is matched by `provider_ref` and handled idempotently. The gateway is never called while a database transaction is open.
+The gateway (Razorpay or Stripe later, a mock for now) is an external system behind a `PaymentGateway` interface. Payment creates an order, the guest pays on the gateway's page, and the gateway calls our webhook. The webhook can arrive late, twice, or never. The app matches it on `provider_ref`. A repeat delivery is the same payment. The gateway is never called while a database transaction is open.
 
 ## How we work
 
@@ -66,7 +66,7 @@ The gateway (Razorpay or Stripe later, a mock for now) is an external system beh
 - Exit-gate tests run against a real Postgres through Testcontainers, in GitHub Actions.
 - Work goes in through pull requests, reviewed before merge.
 
-## The climb
+## Levels
 
 Levels 0 to 4 run locally on Docker Compose. The rough order:
 
@@ -78,9 +78,9 @@ Levels 0 to 4 run locally on Docker Compose. The rough order:
 
 ## HTTP contract
 
-Level 0 clients talk to one app. The exit-gate tests call the paths
-below and nothing else, so they compile before those modules exist.
-They fail at runtime until this contract holds.
+Level 0 clients talk to one app. The exit-gate tests call only the paths
+below. The tests compile before those modules exist. They fail at runtime
+until this contract holds.
 
 Dates are `YYYY-MM-DD`. A stay covers `checkIn` inclusive and
 `checkOut` exclusive, the same window as the hold statement above.
@@ -194,9 +194,9 @@ committed. A gateway error does not roll back a hold that already
 committed. The booking response may wait on the gateway. The inventory
 row lock must not.
 
-Two overlapping bookings, `total = 2`, same room type and dates, while
-that order call sleeps for 5 seconds: both transactions commit within a
-second, `reserved` ends at 2, and the gateway is called once per
+Two overlapping bookings use `total = 2` and the same room type and
+dates. The order call sleeps for 5 seconds. Both transactions commit
+within a second. `reserved` ends at 2. The gateway is called once per
 booking.
 
 Test-only header, which a real client never sends:
