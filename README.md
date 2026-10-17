@@ -310,8 +310,9 @@ and every push. `pr-title` is pull-request only.
   threshold, so the number does not fail the job.
 - `security` — CodeQL for Java. The job sets up Temurin 21, compiles
   with Maven, and uploads the results.
-- `pr-title` — title and each commit use `type: summary` or
-  `type(scope): summary`. Scope is optional.
+- `pr-title` — the pull request title follows the commit rules in
+  Contributing. Squash merge makes the title the commit on `main`, so
+  the job does not lint the branch's commits.
 - `exit-gate` — enabled levels only. Today that is `level0`. The job
   reports pass or fail and does not block the workflow
   (`continue-on-error`). It stays red until the contract is
@@ -331,7 +332,9 @@ To turn a level on, add its tag to `-Dgroups`. For example,
 ## Contributing
 
 Commits use Conventional Commits. The subject is `type: summary` or
-`type(scope): summary`.
+`type(scope): summary`. A `!` before the colon marks a breaking
+change, as in `feat!: summary`. Subjects that git writes also pass:
+`Merge branch …`, `Revert "…"`, `fixup! …`, and `squash! …`.
 
 Types, and only these: `feat`, `fix`, `chore`, `ci`, `docs`, `test`,
 `refactor`.

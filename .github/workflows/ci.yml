@@ -128,23 +128,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-          fetch-depth: 0
-      - name: Lint PR title and commits
+      - name: Lint PR title
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-          BASE_REF: ${{ github.base_ref }}
-        run: |
-          set -euo pipefail
-          git fetch origin "${BASE_REF}"
-          ./scripts/lint-commit-message.sh --subject "${PR_TITLE}"
-          while IFS= read -r subject; do
-            if [[ -z "${subject}" ]]; then
-              continue
-            fi
-            ./scripts/lint-commit-message.sh --subject "${subject}"
-          done < <(git log --format=%s "origin/${BASE_REF}..HEAD")
+        run: ./scripts/lint-commit-message.sh --subject "${PR_TITLE}"
 
   exit-gate:
     name: exit-gate
