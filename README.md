@@ -6,7 +6,7 @@ The point is to learn system design by meeting each problem for real and fixing 
 
 ![Level 0 architecture](docs/architecture/level-0.svg)
 
-The live design is on the [Hotel Booking System board](https://www.tldraw.com/f/qtsxGM0vwAG2muaGMI4pF) in tldraw. That board is the source of truth. The files in [`docs/architecture/`](docs/architecture/) are snapshots of it.
+[`docs/architecture/`](docs/architecture/) holds snapshots of the design board.
 
 ## Level 0: the monolith
 
