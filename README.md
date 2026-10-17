@@ -12,6 +12,13 @@ The point is to learn system design by meeting each problem for real and fixing 
 
 One Spring Boot app, one Postgres database, and a mock payment gateway running outside the app.
 
+Services read time from the injected `Clock`. The app bean is
+`Clock.systemUTC()`. The gates replace that bean with a test clock
+fixed at `2027-01-01T00:00:00Z`. A booking night in the gates is 60
+days after that clock. Do not call `now()` in Java or SQL. Otherwise
+the gates will not see the test clock. The fixed instant is ahead of
+the wall clock, so `now()` is not already past the hold.
+
 **Modules**
 
 | Read side | Write side |
@@ -154,14 +161,15 @@ key is `(room_type_id, date)`.
 {
   "userId": 1,
   "roomTypeId": 1,
-  "checkIn": "2026-12-20",
-  "checkOut": "2026-12-23",
+  "checkIn": "2027-03-02",
+  "checkOut": "2027-03-05",
   "guests": 2,
   "idempotencyKey": "guest-1"
 }
 ```
 
-That sample is three nights: 20, 21, and 22 December.
+That sample is three nights: 2, 3, and 4 March 2027. The gates book
+2 March 2027, which is 60 days after the test clock.
 
 The `inventory` rows for those nights must already exist. The hold does
 not insert them. It runs the update in "Holding a room". When the
@@ -176,8 +184,8 @@ number of updated rows equals the number of nights, insert one
   "id": 10,
   "userId": 1,
   "roomTypeId": 1,
-  "checkIn": "2026-12-20",
-  "checkOut": "2026-12-23",
+  "checkIn": "2027-03-02",
+  "checkOut": "2027-03-05",
   "guests": 2,
   "status": "HELD",
   "idempotencyKey": "guest-1"
@@ -274,9 +282,10 @@ Level 2 also checks 100 concurrent bookings of one night with
 `reserved` is 5.
 
 Level 2 also expires holds. The gate inserts a `HELD` booking whose
-`hold_expires_at` passed a minute ago, on a night with `total = 1` and
-`reserved = 1`. Within 10 seconds, a new hold on that night returns
-`201`. The old booking is then `EXPIRED`, and `reserved` is 1.
+`hold_expires_at` is the test clock's instant, on a night with
+`total = 1` and `reserved = 1`. It then advances that clock by one
+minute. A new hold on that night returns `201` with no wait. The old
+booking is `EXPIRED`, and `reserved` is 1.
 
 ## Running locally
 
