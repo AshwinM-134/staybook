@@ -3,8 +3,9 @@
 # Subject: type: summary
 #      or: type(scope): summary
 #      or: either form with ! before the colon for a breaking change
-# Git's own subjects pass as written: Merge ..., Revert "...",
-# fixup! ..., and squash! ...
+# The commit-msg hook also passes Git's own subjects as written:
+# Merge ..., Revert "...", fixup! ..., and squash! ...
+# --pr-title does not. Squash merge makes the title the commit on main.
 
 set -euo pipefail
 
@@ -26,8 +27,10 @@ read_subject() {
   return 1
 }
 
+pr_title=false
 subject=''
-if [[ "${1:-}" == "--subject" ]]; then
+if [[ "${1:-}" == "--pr-title" ]]; then
+  pr_title=true
   subject="${2:-}"
 elif [[ $# -ge 1 ]]; then
   subject="$(read_subject < "$1")" || subject=''
@@ -37,14 +40,27 @@ fi
 
 conventional="^(${types})(\\((${scopes})\\))?!?: [^[:space:]].*$"
 git_generated='^(Merge .+|Revert ".+"|(fixup|squash)! .+)$'
-if [[ ! "${subject}" =~ ${conventional} && ! "${subject}" =~ ${git_generated} ]]; then
-  echo "Commit subject is not a conventional commit." >&2
-  echo "Use: type: summary" >&2
-  echo " or: type(scope): summary" >&2
-  echo " or: type!: summary for a breaking change" >&2
-  echo "types: feat, fix, chore, ci, docs, test, refactor" >&2
-  echo "scopes (optional): search, catalog, pricing, reviews, booking, inventory, payment, identity, ci, deps, docs" >&2
-  echo "Git subjects also pass: Merge ..., Revert \"...\", fixup! ..., squash! ..." >&2
-  echo "got: ${subject}" >&2
-  exit 1
+if [[ "${subject}" =~ ${conventional} ]]; then
+  exit 0
 fi
+if [[ "${pr_title}" == false && "${subject}" =~ ${git_generated} ]]; then
+  exit 0
+fi
+
+if [[ "${pr_title}" == true ]]; then
+  echo "Pull request title is not a conventional commit." >&2
+else
+  echo "Commit subject is not a conventional commit." >&2
+fi
+echo "Use: type: summary" >&2
+echo " or: type(scope): summary" >&2
+echo " or: type!: summary for a breaking change" >&2
+echo "types: feat, fix, chore, ci, docs, test, refactor" >&2
+echo "scopes (optional): search, catalog, pricing, reviews, booking, inventory, payment, identity, ci, deps, docs" >&2
+if [[ "${pr_title}" == true ]]; then
+  echo "Merge ..., Revert \"...\", fixup! ..., and squash! ... titles fail. The title becomes the commit on main." >&2
+else
+  echo "Git subjects also pass: Merge ..., Revert \"...\", fixup! ..., squash! ..." >&2
+fi
+echo "got: ${subject}" >&2
+exit 1
