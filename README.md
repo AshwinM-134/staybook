@@ -297,13 +297,16 @@ and every push. `pr-title` is pull-request only.
   are off here because Maven already runs them.
 - `coverage` — JaCoCo report, posted on the pull request. No coverage
   threshold, so the number does not fail the job.
-- `security` — CodeQL for Java.
 - `pr-title` — title and each commit use `type: summary` or
   `type(scope): summary`. Scope is optional.
 - `exit-gate` — enabled levels only. Today that is `level0`. The job
   reports pass or fail and does not block the workflow
   (`continue-on-error`). It stays red until the contract is
   implemented.
+
+There is no CodeQL job. Uploading results needs GitHub Code Security,
+which this private repo does not have. CodeQL can come back if the
+repo goes public.
 
 Dependabot opens weekly updates for Maven, Docker, and GitHub Actions.
 
