@@ -15,6 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.Date;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -189,7 +190,14 @@ class Level3ExitGateTest extends ExitGateSupport {
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
     LocalDate night = LocalDate.of(2026, 12, 20);
     return Fixtures.insertBooking(
-        jdbc(), userId, roomTypeId, night, night.plusDays(1), status, idempotencyKey);
+        jdbc(),
+        userId,
+        roomTypeId,
+        night,
+        night.plusDays(1),
+        status,
+        idempotencyKey,
+        Instant.parse("2026-12-20T12:00:00Z"));
   }
 
   private boolean reservedReaches(NightStay stay, int expected, Duration within)

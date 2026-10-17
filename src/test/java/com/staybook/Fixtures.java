@@ -88,7 +88,8 @@ final class Fixtures {
       LocalDate checkIn,
       LocalDate checkOut,
       String status,
-      String idempotencyKey) {
+      String idempotencyKey,
+      Instant holdExpiresAt) {
     Long id =
         jdbc.queryForObject(
             "insert into booking (user_id, room_type_id, check_in, check_out, guests,"
@@ -104,7 +105,7 @@ final class Fixtures {
             status,
             idempotencyKey,
             "fixture-" + idempotencyKey,
-            Timestamp.from(Instant.parse("2026-12-20T12:00:00Z")));
+            Timestamp.from(holdExpiresAt));
     return id == null ? 0L : id;
   }
 

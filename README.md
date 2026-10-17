@@ -266,6 +266,11 @@ Level 2 also checks 100 concurrent bookings of one night with
 `total = 5`: exactly 5 responses are `201`, the rest are `409`, and
 `reserved` is 5.
 
+Level 2 also expires holds. The gate inserts a `HELD` booking whose
+`hold_expires_at` passed a minute ago, on a night with `total = 1` and
+`reserved = 1`. Within 10 seconds, a new hold on that night returns
+`201`. The old booking is then `EXPIRED`, and `reserved` is 1.
+
 ## Running locally
 
 Start Postgres and the mock gateway:
