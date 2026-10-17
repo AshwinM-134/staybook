@@ -83,7 +83,7 @@ class Level3ExitGateTest extends ExitGateSupport {
   @Test
   void fiveIdenticalSignedWebhooksLeaveOnePaidPayment() throws Exception {
     long bookingId = insertBooking("CONFIRMED_UNPAID", "webhook-booking");
-    String body = webhookBody(bookingId, "order_123", "pay-1");
+    String body = webhookBody(bookingId, "order_123", "pay-1", Fixtures.TOTAL_PRICE_PAISE);
     String signature = sign(body);
     CyclicBarrier barrier = new CyclicBarrier(5);
     try (ExecutorService pool = Executors.newFixedThreadPool(5)) {
@@ -108,9 +108,20 @@ class Level3ExitGateTest extends ExitGateSupport {
   @Test
   void badSignatureReturns401AndWritesNothing() throws Exception {
     long bookingId = insertBooking("CONFIRMED_UNPAID", "bad-signature-booking");
-    String body = webhookBody(bookingId, "order_bad", "pay-bad");
+    String body = webhookBody(bookingId, "order_bad", "pay-bad", Fixtures.TOTAL_PRICE_PAISE);
     HttpResponse response = postWebhook(body, "00");
     assertEquals(401, response.status());
+    assertEquals(0, Fixtures.countPayments(jdbc()));
+    assertEquals("CONFIRMED_UNPAID", Fixtures.bookingStatus(jdbc(), bookingId));
+  }
+
+  @Test
+  void aSignedWebhookWhoseAmountDoesNotMatchTheBookingIsRejected() throws Exception {
+    long bookingId = insertBooking("CONFIRMED_UNPAID", "mismatch-booking");
+    long rupeesSentAsPaise = Fixtures.TOTAL_PRICE_PAISE / 100;
+    String body = webhookBody(bookingId, "order_mismatch", "pay-mismatch", rupeesSentAsPaise);
+    HttpResponse response = postWebhook(body, sign(body));
+    assertEquals(422, response.status());
     assertEquals(0, Fixtures.countPayments(jdbc()));
     assertEquals("CONFIRMED_UNPAID", Fixtures.bookingStatus(jdbc(), bookingId));
   }
@@ -212,12 +223,13 @@ class Level3ExitGateTest extends ExitGateSupport {
     return Fixtures.reserved(jdbc(), stay.roomTypeId(), stay.night()) >= expected;
   }
 
-  private static String webhookBody(long bookingId, String providerRef, String idempotencyKey) {
+  private static String webhookBody(
+      long bookingId, String providerRef, String idempotencyKey, long amountPaise) {
     return """
         {"providerRef":"%s","bookingId":%d,"amount":%d,\
         "paymentType":"card","idempotencyKey":"%s"}\
         """
-        .formatted(providerRef, bookingId, Fixtures.TOTAL_PRICE_PAISE, idempotencyKey);
+        .formatted(providerRef, bookingId, amountPaise, idempotencyKey);
   }
 
   private static String sign(String body) {

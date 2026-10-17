@@ -256,6 +256,11 @@ with status `PAID`, and moves the booking to `PAID`. Every response is
 A bad signature returns `401`. The booking status stays as it was, and
 no payment row is written.
 
+A correctly signed webhook whose `amount` differs from the booking's
+`total_price_paise` returns `422`. It also writes no payment row and
+leaves the booking status as it was. The level 3 gate sends `1500`,
+rupees mistaken for paise, against a booking of `150000`.
+
 ### Exit-gate tags
 
 `level0` runs in CI and is expected to fail until this contract and
