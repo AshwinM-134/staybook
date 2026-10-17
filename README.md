@@ -303,8 +303,9 @@ and every push. `pr-title` is pull-request only.
   Spotless (`google-java-format`). A violation fails the job. Format
   with `./mvnw spotless:apply`.
 - `megalinter` — YAML, Markdown, Dockerfile, Compose (as YAML), SQL,
-  shell, and GitHub Actions. Gitleaks runs in this job. Java linters
-  are off here because Maven already runs them.
+  shell, and GitHub Actions. Gitleaks 8.30.1 runs in this job after
+  `sha256sum` checks the downloaded tarball. Java linters are off here
+  because Maven already runs them.
 - `coverage` — JaCoCo report, posted on the pull request. No coverage
   threshold, so the number does not fail the job.
 - `security` — CodeQL for Java. The job sets up Temurin 21, compiles
