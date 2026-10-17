@@ -1,0 +1,12 @@
+title = "staybook"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Local Compose database password and the documented test webhook secret"
+regexTarget = "secret"
+regexes = [
+  '''^staybook$''',
+  '''^test-webhook-secret$''',
+]

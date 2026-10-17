@@ -1,0 +1,37 @@
+---
+spring:
+  application:
+    name: staybook
+  datasource:
+    url: jdbc:postgresql://localhost:5432/staybook
+    username: staybook
+  flyway:
+    enabled: true
+
+staybook:
+  payment:
+    gateway-base-url: http://localhost:8089
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "dev | test"
+  datasource:
+    password: ${DB_PASSWORD:staybook}
+
+staybook:
+  payment:
+    webhook-secret: ${STAYBOOK_PAYMENT_WEBHOOK_SECRET:test-webhook-secret}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: "!dev & !test"
+  datasource:
+    password: ${DB_PASSWORD}
+
+staybook:
+  payment:
+    webhook-secret: ${STAYBOOK_PAYMENT_WEBHOOK_SECRET}
