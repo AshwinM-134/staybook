@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
 import java.time.LocalDate;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +30,11 @@ class ExitGateSupport {
   @BeforeEach
   void resetDatabase() {
     Fixtures.reset(database, migrations);
-    client = WebTestClient.bindToServer().baseUrl("http://localhost:" + port).build();
+    client =
+        WebTestClient.bindToServer()
+            .baseUrl("http://localhost:" + port)
+            .responseTimeout(Duration.ofSeconds(30))
+            .build();
   }
 
   final JdbcTemplate jdbc() {
