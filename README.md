@@ -1,10 +1,15 @@
 # staybook
 
-Staybook is a hotel booking system, like Booking.com or Airbnb. Each level is built by hand. Level 0 is one Spring Boot app and one Postgres database. Later levels add concurrency, payments, microservices, caching, search, and load balancing.
-
+Staybook is a hotel booking system, like Booking.com or Airbnb. Each level is built by hand.
 The point is to learn system design by meeting each problem for real and fixing it, not by reading about it.
 
 ![Level 0 architecture](docs/architecture/level-0.svg)
+
+- [Level 0 architecture](docs/architecture/level-0.md) covers the
+  requirements, actors, modules, flows, and the payment gateway.
+- [Level 0 data model](docs/architecture/data-model.md) covers the
+  tables, the rules the schema enforces, booking states, and money and
+  time.
 
 [`docs/architecture/`](docs/architecture/) holds snapshots of the design board.
 
