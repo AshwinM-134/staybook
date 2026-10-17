@@ -1,6 +1,7 @@
 ---
-# MD013 and MD036 are off because the existing README fails them:
-# long lines in the architecture writeup, and **Modules** used as a heading.
+# MD013 and MD036 are off because the level 0 writeup fails them:
+# long lines in docs/levels.md and the README intro, and **Modules**
+# used as a heading in docs/levels.md.
 # Sections added after that writeup stay within 80 columns and use real headings.
 default: true
 MD013: false
