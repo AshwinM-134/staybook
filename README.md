@@ -2,6 +2,10 @@
 
 [![License: MIT](https://img.shields.io/github/license/AshwinM-134/staybook)](LICENSE)
 [![Java 21](https://img.shields.io/badge/Java-21-blue)](pom.xml)
+[![build](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=build&label=build)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
+[![java-quality](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=java-quality&label=java-quality)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
+[![megalinter](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=megalinter&label=megalinter)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
+[![security](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=security&label=security)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
 
 Staybook is a hotel booking system, like Booking.com or Airbnb. Each level is built by hand.
 The point is to learn system design by meeting each problem for real and fixing it, not by reading about it.
@@ -18,10 +22,6 @@ The point is to learn system design by meeting each problem for real and fixing 
 
 ## CI
 
-[![build](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=build&label=build)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
-[![java-quality](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=java-quality&label=java-quality)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
-[![megalinter](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=megalinter&label=megalinter)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
-[![security](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=security&label=security)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
 [![exit-gate](https://img.shields.io/github/check-runs/AshwinM-134/staybook/main?nameFilter=exit-gate&label=exit-gate)](https://github.com/AshwinM-134/staybook/actions/workflows/ci.yml?query=branch%3Amain)
 
 Each badge shows the latest result of that check on `main`.
