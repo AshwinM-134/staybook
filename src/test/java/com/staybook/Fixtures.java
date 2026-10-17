@@ -5,6 +5,7 @@ import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Objects;
 import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -42,7 +43,7 @@ final class Fixtures {
             "guest",
             "guest@example.com",
             "hash");
-    return id == null ? 0L : id;
+    return Objects.requireNonNull(id, "insert into users returned no id");
   }
 
   static long insertHotel(JdbcTemplate jdbc, long ownerId) {
@@ -54,7 +55,7 @@ final class Fixtures {
             "Harbor",
             "Kochi",
             "1 Beach Road");
-    return id == null ? 0L : id;
+    return Objects.requireNonNull(id, "insert into hotel returned no id");
   }
 
   static long insertRoomType(JdbcTemplate jdbc, long hotelId) {
@@ -65,7 +66,7 @@ final class Fixtures {
             hotelId,
             "Deluxe",
             2);
-    return id == null ? 0L : id;
+    return Objects.requireNonNull(id, "insert into room_type returned no id");
   }
 
   static void insertInventory(
@@ -85,7 +86,7 @@ final class Fixtures {
             Integer.class,
             roomTypeId,
             Date.valueOf(date));
-    return value == null ? 0 : value;
+    return Objects.requireNonNull(value, "inventory.reserved is null");
   }
 
   static long insertBooking(
@@ -111,14 +112,14 @@ final class Fixtures {
             TOTAL_PRICE_PAISE,
             status,
             idempotencyKey,
-            "fixture-" + idempotencyKey,
+            "fixture-" + Objects.requireNonNull(idempotencyKey, "idempotencyKey"),
             Timestamp.from(holdExpiresAt));
-    return id == null ? 0L : id;
+    return Objects.requireNonNull(id, "insert into booking returned no id");
   }
 
   static int countBookings(JdbcTemplate jdbc) {
     Integer count = jdbc.queryForObject("select count(*) from booking", Integer.class);
-    return count == null ? 0 : count;
+    return Objects.requireNonNull(count, "count of booking is null");
   }
 
   static String bookingStatus(JdbcTemplate jdbc, long bookingId) {
@@ -127,14 +128,14 @@ final class Fixtures {
 
   static int countPayments(JdbcTemplate jdbc) {
     Integer count = jdbc.queryForObject("select count(*) from payment", Integer.class);
-    return count == null ? 0 : count;
+    return Objects.requireNonNull(count, "count of payment is null");
   }
 
   static int countPayments(JdbcTemplate jdbc, String providerRef) {
     Integer count =
         jdbc.queryForObject(
             "select count(*) from payment where provider_ref = ?", Integer.class, providerRef);
-    return count == null ? 0 : count;
+    return Objects.requireNonNull(count, "count of payment is null");
   }
 
   static String paymentStatus(JdbcTemplate jdbc, String providerRef) {
