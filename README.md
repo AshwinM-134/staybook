@@ -263,8 +263,10 @@ The `dev` profile uses `test-webhook-secret` unless
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
-Flyway applies `V1__init.sql` on startup. That file is a comment until
-the schema is written.
+`src/main/resources/db/migration` holds only a `.gitkeep`. Ash's real
+schema is the first migration, `V1__init.sql`, and Flyway applies it on
+startup. Until then Flyway logs `No migrations found` and the app still
+starts.
 
 Default tests, linters, and formatter check:
 
