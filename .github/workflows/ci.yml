@@ -101,13 +101,13 @@ jobs:
           java-version: "21"
           cache: maven
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3.39.0
+        uses: github/codeql-action/init@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
         with:
           languages: java
       - name: Compile
         run: ./mvnw -B -DskipTests package
       - name: Analyze
-        uses: github/codeql-action/analyze@ce5e7eeac396d720fe2d802714996c8ce561e311 # v3.39.0
+        uses: github/codeql-action/analyze@24c54180a607b1449ed407dd24f251e4e9147c8d # v4.38.3
 
   exit-gate:
     name: exit-gate
