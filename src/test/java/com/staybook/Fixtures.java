@@ -2,17 +2,24 @@ package com.staybook;
 
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Inserts and truncates rows. Schema lives in V1__init.sql. A missing table fails the test. */
+/** Inserts and truncates rows. Schema will live in V1__init.sql. A missing table fails the test. */
 final class Fixtures {
 
   static final long TOTAL_PRICE_PAISE = 150_000L;
 
+  private static final int BOOKING_LEAD_DAYS = 60;
+
   private Fixtures() {}
+
+  static LocalDate night(Clock clock) {
+    return LocalDate.ofInstant(clock.instant(), clock.getZone()).plusDays(BOOKING_LEAD_DAYS);
+  }
 
   static void reset(JdbcTemplate jdbc, Flyway flyway) {
     String tables =

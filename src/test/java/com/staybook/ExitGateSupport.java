@@ -10,11 +10,13 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.springframework.test.web.reactive.server.WebTestClient.RequestBodySpec;
 
+@Import(ControllableClockConfig.class)
 class ExitGateSupport {
 
   private final ObjectMapper mapper = new ObjectMapper();
@@ -25,10 +27,13 @@ class ExitGateSupport {
 
   @Autowired private Flyway migrations;
 
+  @Autowired private ControllableClock controllableClock;
+
   private WebTestClient client;
 
   @BeforeEach
   void resetDatabase() {
+    controllableClock.reset();
     Fixtures.reset(database, migrations);
     client =
         WebTestClient.bindToServer()
@@ -39,6 +44,10 @@ class ExitGateSupport {
 
   final JdbcTemplate jdbc() {
     return database;
+  }
+
+  final ControllableClock clock() {
+    return controllableClock;
   }
 
   final Flyway flyway() {

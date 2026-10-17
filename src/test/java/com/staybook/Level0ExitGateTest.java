@@ -47,7 +47,7 @@ class Level0ExitGateTest extends ExitGateSupport {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
-    LocalDate night = LocalDate.of(2026, 12, 20);
+    LocalDate night = Fixtures.night(clock());
     DataIntegrityViolationException failure =
         assertThrows(
             DataIntegrityViolationException.class,
@@ -60,7 +60,7 @@ class Level0ExitGateTest extends ExitGateSupport {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
-    LocalDate night = LocalDate.of(2026, 12, 20);
+    LocalDate night = Fixtures.night(clock());
     DataIntegrityViolationException failure =
         assertThrows(
             DataIntegrityViolationException.class,
@@ -71,7 +71,7 @@ class Level0ExitGateTest extends ExitGateSupport {
   @Test
   void holdIncrementsReservedOnEachNight() {
     long userId = Fixtures.insertUser(jdbc());
-    LocalDate checkIn = LocalDate.of(2026, 12, 20);
+    LocalDate checkIn = Fixtures.night(clock());
     int nights = 3;
     LocalDate checkOut = checkIn.plusDays(nights);
     long roomTypeId = insertNights(userId, checkIn, nights, 5, 0);
@@ -89,7 +89,7 @@ class Level0ExitGateTest extends ExitGateSupport {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
-    LocalDate checkIn = LocalDate.of(2026, 12, 20);
+    LocalDate checkIn = Fixtures.night(clock());
     Fixtures.insertInventory(jdbc(), roomTypeId, checkIn, 5, 0);
     Fixtures.insertInventory(jdbc(), roomTypeId, checkIn.plusDays(1), 5, 0);
     Fixtures.insertInventory(jdbc(), roomTypeId, checkIn.plusDays(2), 1, 1);
@@ -105,7 +105,7 @@ class Level0ExitGateTest extends ExitGateSupport {
   @Test
   void releaseSubtractsReservedOnEachNight() {
     long userId = Fixtures.insertUser(jdbc());
-    LocalDate checkIn = LocalDate.of(2026, 12, 20);
+    LocalDate checkIn = Fixtures.night(clock());
     int nights = 3;
     LocalDate checkOut = checkIn.plusDays(nights);
     long roomTypeId = insertNights(userId, checkIn, nights, 5, 0);
@@ -121,7 +121,7 @@ class Level0ExitGateTest extends ExitGateSupport {
   @Test
   void releasingTwiceLeavesReservedAtZero() {
     long userId = Fixtures.insertUser(jdbc());
-    LocalDate checkIn = LocalDate.of(2026, 12, 20);
+    LocalDate checkIn = Fixtures.night(clock());
     int nights = 2;
     LocalDate checkOut = checkIn.plusDays(nights);
     long roomTypeId = insertNights(userId, checkIn, nights, 5, 0);
@@ -138,7 +138,7 @@ class Level0ExitGateTest extends ExitGateSupport {
   @Test
   void theSameIdempotencyKeyWithAnotherBodyReturns422() {
     long userId = Fixtures.insertUser(jdbc());
-    LocalDate checkIn = LocalDate.of(2026, 12, 20);
+    LocalDate checkIn = Fixtures.night(clock());
     long roomTypeId = insertNights(userId, checkIn, 2, 5, 0);
     HttpResponse first =
         postBooking(userId, roomTypeId, checkIn, checkIn.plusDays(1), "reused-key");
@@ -154,7 +154,7 @@ class Level0ExitGateTest extends ExitGateSupport {
   @Test
   void theSameIdempotencyKeyReservesOnceAndReturnsTheSameBooking() {
     long userId = Fixtures.insertUser(jdbc());
-    LocalDate checkIn = LocalDate.of(2026, 12, 20);
+    LocalDate checkIn = Fixtures.night(clock());
     int nights = 1;
     LocalDate checkOut = checkIn.plusDays(nights);
     long roomTypeId = insertNights(userId, checkIn, nights, 5, 0);

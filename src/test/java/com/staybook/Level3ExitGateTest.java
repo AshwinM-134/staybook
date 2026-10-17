@@ -14,7 +14,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.Date;
 import java.time.Duration;
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -192,7 +191,7 @@ class Level3ExitGateTest extends ExitGateSupport {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
-    LocalDate night = LocalDate.of(2026, 12, 20);
+    LocalDate night = Fixtures.night(clock());
     Fixtures.insertInventory(jdbc(), roomTypeId, night, total, 0);
     return new NightStay(userId, roomTypeId, night);
   }
@@ -201,7 +200,7 @@ class Level3ExitGateTest extends ExitGateSupport {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);
-    LocalDate night = LocalDate.of(2026, 12, 20);
+    LocalDate night = Fixtures.night(clock());
     return Fixtures.insertBooking(
         jdbc(),
         userId,
@@ -210,7 +209,7 @@ class Level3ExitGateTest extends ExitGateSupport {
         night.plusDays(1),
         status,
         idempotencyKey,
-        Instant.parse("2026-12-20T12:00:00Z"));
+        clock().instant().plus(Duration.ofMinutes(1)));
   }
 
   private boolean reservedReaches(NightStay stay, int expected, Duration within)
