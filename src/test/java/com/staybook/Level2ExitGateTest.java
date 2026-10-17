@@ -17,8 +17,6 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 
 @Tag("level2")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -28,11 +26,6 @@ class Level2ExitGateTest extends ExitGateSupport {
   private static final int ROOM_TOTAL = 5;
   private static final int CREATED = 201;
   private static final int CONFLICT = 409;
-
-  @DynamicPropertySource
-  static void properties(DynamicPropertyRegistry registry) {
-    SharedPostgres.register(registry);
-  }
 
   @Test
   void tenParallelCallsWithOneKeyCreateOneBooking() throws Exception {
