@@ -8,15 +8,21 @@ import java.time.LocalDate;
 import org.flywaydb.core.Flyway;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-/** Inserts rows only. Schema lives in V1__init.sql. A missing table fails the test. */
+/** Inserts and truncates rows. Schema lives in V1__init.sql. A missing table fails the test. */
 final class Fixtures {
 
   private Fixtures() {}
 
   static void reset(JdbcTemplate jdbc, Flyway flyway) {
-    jdbc.execute("drop schema if exists public cascade");
-    jdbc.execute("create schema public");
-    flyway.migrate();
+    String tables =
+        jdbc.queryForObject(
+            "select string_agg(quote_ident(tablename), ', ') from pg_tables"
+                + " where schemaname = 'public' and tablename <> ?",
+            String.class,
+            flyway.getConfiguration().getTable());
+    if (tables != null) {
+      jdbc.execute("truncate table " + tables + " restart identity cascade");
+    }
   }
 
   static long insertUser(JdbcTemplate jdbc) {
