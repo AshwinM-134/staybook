@@ -289,10 +289,11 @@ booking is `EXPIRED`, and `reserved` is 1.
 
 ## Running locally
 
-Start Postgres and the mock gateway:
+Start Postgres and the mock gateway. `--wait` returns when both
+healthchecks pass:
 
 ```bash
-docker compose up -d
+docker compose up -d --wait
 ```
 
 Run the app against that Postgres with the `dev` profile. The `dev` and
