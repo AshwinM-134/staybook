@@ -33,15 +33,7 @@ ahead of the wall clock, so `now()` is not already past the hold.
 
 ### Entities
 
-| Table | Columns |
-| --- | --- |
-| `users` | id, username (unique), email (unique), password_hash, created_at, last_logged_in |
-| `hotel` | id, owner_id → users, name, city, address |
-| `room_type` | id, hotel_id → hotel, name, capacity |
-| `inventory` | room_type_id → room_type, date, total, reserved. Primary key (room_type_id, date), `reserved >= 0`, `reserved <= total` |
-| `rate` | room_type_id → room_type, date, price |
-| `booking` | id, user_id → users, room_type_id → room_type, check_in, check_out, guests, total_price_paise, status, idempotency_key (unique), request_hash, hold_expires_at, created_at |
-| `payment` | id, booking_id → booking, amount_paise, payment_type, status, provider_ref (unique), idempotency_key, created_at |
+The level 0 tables and their relationships are in [`architecture/data-model.md`](architecture/data-model.md).
 
 Booking status is one of `HELD`, `CONFIRMED_UNPAID`, `PAID`, `CANCELLED`, `EXPIRED`. One booking can have many payments, because a failed attempt can be retried.
 
