@@ -24,7 +24,7 @@
     <excludedGroups>level0,level2,level3</excludedGroups>
     <groups></groups>
     <testcontainers.version>1.21.4</testcontainers.version>
-    <wiremock.version>3.13.1</wiremock.version>
+    <wiremock.version>3.13.2</wiremock.version>
     <checkstyle.version>10.26.1</checkstyle.version>
     <pmd.version>3.28.0</pmd.version>
     <spotbugs.version>4.10.5.0</spotbugs.version>
