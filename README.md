@@ -254,10 +254,11 @@ Start Postgres and the mock gateway:
 docker compose up -d
 ```
 
-Run the app against that Postgres with the `dev` profile. The database
-password is `DB_PASSWORD`, or `staybook` when that variable is unset.
-The `dev` profile uses `test-webhook-secret` unless
-`STAYBOOK_PAYMENT_WEBHOOK_SECRET` is set:
+Run the app against that Postgres with the `dev` profile. The `dev` and
+`test` profiles use the database password `staybook` unless
+`DB_PASSWORD` is set, and `test-webhook-secret` unless
+`STAYBOOK_PAYMENT_WEBHOOK_SECRET` is set. Any other profile has no
+fallback for either and does not start without both:
 
 ```bash
 ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
