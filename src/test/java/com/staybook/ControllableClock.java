@@ -5,43 +5,51 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Objects;
+import java.util.concurrent.atomic.AtomicReference;
 
-/** A clock fixed at a known instant that tests can move forward. */
+/** A clock tests can move forward. A withZone copy reads the same instant. */
 final class ControllableClock extends Clock {
 
-  static final Instant START = Instant.parse("2027-01-01T00:00:00Z");
+  static final Instant START = Instant.parse("2099-01-01T00:00:00Z");
 
-  private static final ZoneId ZONE = ZoneOffset.UTC;
+  private final AtomicReference<Instant> current;
 
-  private volatile Instant current;
+  private final ZoneId zone;
 
   ControllableClock(Instant start) {
-    current = start;
+    this(new AtomicReference<>(Objects.requireNonNull(start, "start")), ZoneOffset.UTC);
+  }
+
+  private ControllableClock(AtomicReference<Instant> current, ZoneId zone) {
+    this.current = current;
+    this.zone = zone;
   }
 
   void advance(Duration by) {
-    current = current.plus(by);
+    current.updateAndGet(instant -> instant.plus(by));
   }
 
   void reset() {
-    current = START;
+    current.set(START);
   }
 
   @Override
   public ZoneId getZone() {
-    return ZONE;
+    return zone;
   }
 
   @Override
-  public Clock withZone(ZoneId zone) {
-    if (ZONE.equals(zone)) {
+  public Clock withZone(ZoneId zoneId) {
+    Objects.requireNonNull(zoneId, "zone");
+    if (zoneId.equals(zone)) {
       return this;
     }
-    return Clock.fixed(current, zone);
+    return new ControllableClock(current, zoneId);
   }
 
   @Override
   public Instant instant() {
-    return current;
+    return current.get();
   }
 }

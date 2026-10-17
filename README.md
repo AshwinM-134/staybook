@@ -13,11 +13,11 @@ The point is to learn system design by meeting each problem for real and fixing 
 One Spring Boot app, one Postgres database, and a mock payment gateway running outside the app.
 
 Services read time from the injected `Clock`. The app bean is
-`Clock.systemUTC()`. The gates replace that bean with a test clock
-fixed at `2027-01-01T00:00:00Z`. A booking night in the gates is 60
-days after that clock. Do not call `now()` in Java or SQL. Otherwise
-the gates will not see the test clock. The fixed instant is ahead of
-the wall clock, so `now()` is not already past the hold.
+`Clock.systemUTC()`. The gates add a primary test clock at
+`2099-01-01T00:00:00Z` beside that bean. A booking night in the gates
+is 60 days after that clock. Do not call `now()` in Java or SQL.
+Otherwise the gates will not see the test clock. The fixed instant is
+ahead of the wall clock, so `now()` is not already past the hold.
 
 **Modules**
 
@@ -161,15 +161,15 @@ key is `(room_type_id, date)`.
 {
   "userId": 1,
   "roomTypeId": 1,
-  "checkIn": "2027-03-02",
-  "checkOut": "2027-03-05",
+  "checkIn": "2099-03-02",
+  "checkOut": "2099-03-05",
   "guests": 2,
   "idempotencyKey": "guest-1"
 }
 ```
 
-That sample is three nights: 2, 3, and 4 March 2027. The gates book
-2 March 2027, which is 60 days after the test clock.
+That sample is three nights: 2, 3, and 4 March 2099. The gates book
+2 March 2099, which is 60 days after the test clock.
 
 The `inventory` rows for those nights must already exist. The hold does
 not insert them. It runs the update in "Holding a room". When the
@@ -184,8 +184,8 @@ number of updated rows equals the number of nights, insert one
   "id": 10,
   "userId": 1,
   "roomTypeId": 1,
-  "checkIn": "2027-03-02",
-  "checkOut": "2027-03-05",
+  "checkIn": "2099-03-02",
+  "checkOut": "2099-03-05",
   "guests": 2,
   "status": "HELD",
   "idempotencyKey": "guest-1"
