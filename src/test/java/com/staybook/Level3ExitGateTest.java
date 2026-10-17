@@ -10,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
-import com.staybook.payment.PaymentGateway;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.sql.Date;
@@ -34,14 +33,17 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.client.RestClient;
 
 @Tag("level3")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -267,13 +269,17 @@ class Level3ExitGateTest extends ExitGateSupport {
 
     private final JdbcTemplate jdbc;
     private final TransactionTemplate transactions;
-    private final PaymentGateway gateway;
+    private final RestClient gateway;
 
     GatewayInsideTransactionBooking(
-        JdbcTemplate jdbc, TransactionTemplate transactions, PaymentGateway gateway) {
+        JdbcTemplate jdbc, TransactionTemplate transactions, String gatewayBaseUrl) {
       this.jdbc = jdbc;
       this.transactions = transactions;
-      this.gateway = gateway;
+      this.gateway =
+          RestClient.builder()
+              .requestFactory(new JdkClientHttpRequestFactory())
+              .baseUrl(gatewayBaseUrl)
+              .build();
     }
 
     void hold(long roomTypeId, LocalDate checkIn, LocalDate checkOut, String idempotencyKey) {
@@ -290,7 +296,7 @@ class Level3ExitGateTest extends ExitGateSupport {
             if (held != nights) {
               throw new IllegalStateException("no room for " + idempotencyKey);
             }
-            gateway.createOrder(Fixtures.TOTAL_PRICE_PAISE, "INR", idempotencyKey);
+            gateway.post().uri(ORDERS).retrieve().toBodilessEntity();
           });
     }
   }
@@ -300,8 +306,10 @@ class Level3ExitGateTest extends ExitGateSupport {
 
     @Bean
     GatewayInsideTransactionBooking gatewayInsideTransactionBooking(
-        JdbcTemplate jdbc, TransactionTemplate transactions, PaymentGateway gateway) {
-      return new GatewayInsideTransactionBooking(jdbc, transactions, gateway);
+        JdbcTemplate jdbc,
+        TransactionTemplate transactions,
+        @Value("${staybook.payment.gateway-base-url}") String gatewayBaseUrl) {
+      return new GatewayInsideTransactionBooking(jdbc, transactions, gatewayBaseUrl);
     }
   }
 }
