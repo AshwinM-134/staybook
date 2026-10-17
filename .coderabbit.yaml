@@ -25,7 +25,7 @@ reviews:
         - Never edit a migration that is already on main.
           Changes go in a new V<n>__ file, because Flyway checksums applied migrations.
     - path: src/main/java/com/staybook/booking/**
-      instructions: |
+      instructions: &booking-rules |
         - A hold reserves rooms with a conditional UPDATE ... WHERE reserved < total.
           It succeeds only if the number of rows updated equals the number of nights.
           Flag any read-then-check-then-write.
@@ -34,20 +34,6 @@ reviews:
         - Reusing an idempotency key with a different request hash returns 422.
         - The payment gateway is never called inside a transaction. Business times come from the injected Clock.
     - path: src/main/java/com/staybook/inventory/**
-      instructions: |
-        - A hold reserves rooms with a conditional UPDATE ... WHERE reserved < total.
-          It succeeds only if the number of rows updated equals the number of nights.
-          Flag any read-then-check-then-write.
-        - A release changes the status first, guarded by WHERE status = 'HELD',
-          and gives the rooms back only if exactly one row changed.
-        - Reusing an idempotency key with a different request hash returns 422.
-        - The payment gateway is never called inside a transaction. Business times come from the injected Clock.
+      instructions: *booking-rules
     - path: src/main/java/com/staybook/payment/**
-      instructions: |
-        - A hold reserves rooms with a conditional UPDATE ... WHERE reserved < total.
-          It succeeds only if the number of rows updated equals the number of nights.
-          Flag any read-then-check-then-write.
-        - A release changes the status first, guarded by WHERE status = 'HELD',
-          and gives the rooms back only if exactly one row changed.
-        - Reusing an idempotency key with a different request hash returns 422.
-        - The payment gateway is never called inside a transaction. Business times come from the injected Clock.
+      instructions: *booking-rules
