@@ -368,7 +368,8 @@ of `ci.yml`.
   implemented.
 
 Dependabot opens weekly updates for Maven, the images in
-`docker-compose.yml`, and GitHub Actions.
+`docker-compose.yml`, and GitHub Actions. Their titles start with
+`chore(deps):`, so they pass `pr-title`.
 
 The exit-gate command in the workflow is:
 
