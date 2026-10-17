@@ -34,4 +34,5 @@ spring:
 
 staybook:
   payment:
-    webhook-secret: ${STAYBOOK_PAYMENT_WEBHOOK_SECRET}
+    # Binding keeps an unresolved ${...} as literal text, which passes @NotBlank. The empty default does not.
+    webhook-secret: ${STAYBOOK_PAYMENT_WEBHOOK_SECRET:}

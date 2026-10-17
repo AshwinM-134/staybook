@@ -1,23 +1,17 @@
 package com.staybook.payment;
 
-import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
+import jakarta.validation.constraints.NotBlank;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.validation.annotation.Validated;
 
-/** Resolving the webhook secret at startup stops the process when it is missing. */
-@Component
-final class WebhookSecret {
+/** HMAC key for payment webhooks. The app does not start when it is blank. */
+@Validated
+@ConfigurationProperties("staybook.payment")
+record WebhookSecret(
+    @NotBlank(message = "STAYBOOK_PAYMENT_WEBHOOK_SECRET is required") String webhookSecret) {
 
-  private final String secret;
-
-  WebhookSecret(@Value("${staybook.payment.webhook-secret}") String secret) {
-    this.secret = secret;
-  }
-
-  @PostConstruct
-  void rejectBlank() {
-    if (secret.isBlank()) {
-      throw new IllegalStateException("STAYBOOK_PAYMENT_WEBHOOK_SECRET is required");
-    }
+  @Override
+  public String toString() {
+    return "WebhookSecret[webhookSecret=<redacted>]";
   }
 }
