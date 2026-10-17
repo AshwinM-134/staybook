@@ -27,7 +27,7 @@
     <wiremock.version>3.13.1</wiremock.version>
     <checkstyle.version>10.26.1</checkstyle.version>
     <pmd.version>3.28.0</pmd.version>
-    <spotbugs.version>4.9.3.0</spotbugs.version>
+    <spotbugs.version>4.10.5.0</spotbugs.version>
     <spotless.version>2.44.5</spotless.version>
     <google-java-format.version>1.27.0</google-java-format.version>
     <jacoco.version>0.8.13</jacoco.version>
@@ -41,6 +41,10 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
     </dependency>
     <dependency>
       <groupId>org.flywaydb</groupId>
@@ -68,6 +72,11 @@
     <dependency>
       <groupId>io.projectreactor.netty</groupId>
       <artifactId>reactor-netty-http</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-testcontainers</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

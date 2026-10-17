@@ -58,7 +58,6 @@ class Level3ExitGateTest extends ExitGateSupport {
 
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
-    SharedPostgres.register(registry);
     registry.add(
         "staybook.payment.gateway-base-url", Level3ExitGateTest::startGatewayAndReturnBaseUrl);
     registry.add("staybook.payment.webhook-secret", () -> WEBHOOK_SECRET);

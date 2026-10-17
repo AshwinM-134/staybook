@@ -12,8 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 
 @Tag("level0")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -21,11 +19,6 @@ class Level0ExitGateTest extends ExitGateSupport {
 
   private static final List<String> ENTITY_TABLES =
       List.of("users", "hotel", "room_type", "inventory", "rate", "booking", "payment");
-
-  @DynamicPropertySource
-  static void properties(DynamicPropertyRegistry registry) {
-    SharedPostgres.register(registry);
-  }
 
   @Test
   void flywayMigrateAgainStillHasTheEntityTables() {

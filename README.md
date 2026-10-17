@@ -289,10 +289,11 @@ booking is `EXPIRED`, and `reserved` is 1.
 
 ## Running locally
 
-Start Postgres and the mock gateway:
+Start Postgres and the mock gateway. `--wait` returns when both
+healthchecks pass:
 
 ```bash
-docker compose up -d
+docker compose up -d --wait
 ```
 
 Run the app against that Postgres with the `dev` profile. The `dev` and
@@ -340,29 +341,35 @@ to `main`. `.github/workflows/pr-title.yml` runs when a pull request is
 opened, edited, synchronized, or reopened. The title check is not part
 of `ci.yml`.
 
-- `build` — Java 21, `./mvnw verify`, Testcontainers Postgres. Excludes
-  `level0`, `level2`, and `level3`.
-- `java-quality` — PMD, Checkstyle (Google style), SpotBugs, and
-  Spotless (`google-java-format`). A violation fails the job. Format
-  with `./mvnw spotless:apply`.
+- `build` — Java 21, one `./mvnw verify`: tests against Testcontainers
+  Postgres, then PMD, Checkstyle (Google style), SpotBugs, Spotless
+  (`google-java-format`), and JaCoCo. Excludes `level0`, `level2`, and
+  `level3`. A test failure or a lint violation fails the job. Format
+  with `./mvnw spotless:apply`. On a pull request it posts the JaCoCo
+  report as a comment. There is no coverage threshold, and a failed
+  comment does not fail the job.
+- `java-quality` — runs after `build` and passes only if that verify
+  passed. It does not run Maven again. The `main` ruleset requires
+  this check name.
 - `megalinter` — YAML, Markdown, Dockerfile, Compose (as YAML), SQL,
   shell, and GitHub Actions. Gitleaks 8.30.1 runs in this job after
   `sha256sum` checks the downloaded tarball. Java linters are off here
   because Maven already runs them.
-- `coverage` — JaCoCo report, posted on the pull request. No coverage
-  threshold, so the number does not fail the job.
 - `security` — CodeQL for Java. The job sets up Temurin 21, compiles
   with Maven, and uploads the results.
 - `pr-title` — the pull request title follows the commit rules in
-  Contributing. Squash merge makes the title the commit on `main`, so
-  the job does not lint the branch's commits. Editing the title runs
-  this check again.
+  Contributing, without the exceptions for `Merge`, `Revert`,
+  `fixup!`, and `squash!` subjects. Squash merge makes the title the
+  commit on `main`, so the job does not lint the branch's commits.
+  Editing the title runs this check again.
 - `exit-gate` — enabled levels only. Today that is `level0`. The job
   reports pass or fail and does not block the workflow
   (`continue-on-error`). It stays red until the contract is
   implemented.
 
-Dependabot opens weekly updates for Maven, Docker, and GitHub Actions.
+Dependabot opens weekly updates for Maven, the images in
+`docker-compose.yml`, and GitHub Actions. Their titles start with
+`chore(deps):`, so they pass `pr-title`.
 
 The exit-gate command in the workflow is:
 
@@ -377,10 +384,13 @@ To turn a level on, add its tag to `-Dgroups`. For example,
 
 Commits use Conventional Commits. The subject is `type: summary` or
 `type(scope): summary`. A `!` before the colon marks a breaking
-change, as in `feat!: summary`. These subjects also pass. Any line
-that starts with `Merge ` passes, including `Merge branch`, `Merge
-remote-tracking branch 'origin/main'`, and `Merge pull request #1`.
-`Revert "…"`, `fixup! …`, and `squash! …` pass as well.
+change, as in `feat!: summary`.
+
+The commit-msg hook also passes the subjects Git writes itself. Any
+line that starts with `Merge` and a space passes, including
+`Merge branch`, `Merge remote-tracking branch 'origin/main'`, and
+`Merge pull request #1`. `Revert "…"`, `fixup! …`, and `squash! …`
+pass as well. A pull request title does not get these exceptions.
 
 Types, and only these: `feat`, `fix`, `chore`, `ci`, `docs`, `test`,
 `refactor`.
@@ -397,4 +407,11 @@ git config core.hooksPath .githooks
 ```
 
 Squash merge only. The pull request title becomes the commit on
-`main`, so the title follows the same rules.
+`main`, so the title must be `type: summary` or `type(scope): summary`.
+The `pr-title` check fails a title that starts with `Merge`,
+`Revert "`, `fixup!`, or `squash!`. To undo a change, title the pull
+request with a listed type, as in `fix: revert the booking timeout`.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).

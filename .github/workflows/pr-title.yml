@@ -22,4 +22,4 @@ jobs:
       - name: Lint PR title
         env:
           PR_TITLE: ${{ github.event.pull_request.title }}
-        run: ./scripts/lint-commit-message.sh --subject "${PR_TITLE}"
+        run: ./scripts/lint-commit-message.sh --pr-title "${PR_TITLE}"

@@ -10,6 +10,12 @@ services:
       POSTGRES_PASSWORD: staybook
     ports:
       - "127.0.0.1:5432:5432"
+    healthcheck:
+      # Check over TCP. During init Postgres listens only on the socket, so a socket check passes too early.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "staybook", "-d", "staybook"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   wiremock:
     image: wiremock/wiremock:3.13.1
@@ -17,3 +23,8 @@ services:
       - "127.0.0.1:8089:8080"
     volumes:
       - ./wiremock/mappings:/home/wiremock/mappings:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/__admin/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
