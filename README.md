@@ -340,17 +340,20 @@ to `main`. `.github/workflows/pr-title.yml` runs when a pull request is
 opened, edited, synchronized, or reopened. The title check is not part
 of `ci.yml`.
 
-- `build` — Java 21, `./mvnw verify`, Testcontainers Postgres. Excludes
-  `level0`, `level2`, and `level3`.
-- `java-quality` — PMD, Checkstyle (Google style), SpotBugs, and
-  Spotless (`google-java-format`). A violation fails the job. Format
-  with `./mvnw spotless:apply`.
+- `build` — Java 21, one `./mvnw verify`: tests against Testcontainers
+  Postgres, then PMD, Checkstyle (Google style), SpotBugs, Spotless
+  (`google-java-format`), and JaCoCo. Excludes `level0`, `level2`, and
+  `level3`. A test failure or a lint violation fails the job. Format
+  with `./mvnw spotless:apply`. On a pull request it posts the JaCoCo
+  report as a comment. There is no coverage threshold, and a failed
+  comment does not fail the job.
+- `java-quality` — runs after `build` and passes only if that verify
+  passed. It does not run Maven again. The `main` ruleset requires
+  this check name.
 - `megalinter` — YAML, Markdown, Dockerfile, Compose (as YAML), SQL,
   shell, and GitHub Actions. Gitleaks 8.30.1 runs in this job after
   `sha256sum` checks the downloaded tarball. Java linters are off here
   because Maven already runs them.
-- `coverage` — JaCoCo report, posted on the pull request. No coverage
-  threshold, so the number does not fail the job.
 - `security` — CodeQL for Java. The job sets up Temurin 21, compiles
   with Maven, and uploads the results.
 - `pr-title` — the pull request title follows the commit rules in
