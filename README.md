@@ -410,3 +410,7 @@ Squash merge only. The pull request title becomes the commit on
 The `pr-title` check fails a title that starts with `Merge`,
 `Revert "`, `fixup!`, or `squash!`. To undo a change, title the pull
 request with a listed type, as in `fix: revert the booking timeout`.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).
