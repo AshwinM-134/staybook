@@ -119,7 +119,7 @@ class Level0ExitGateTest extends ExitGateSupport {
   }
 
   @Test
-  void aSecondReleaseIsANoOpAndReservedNeverGoesNegative() {
+  void releasingTwiceLeavesReservedAtZero() {
     long userId = Fixtures.insertUser(jdbc());
     LocalDate checkIn = LocalDate.of(2026, 12, 20);
     int nights = 2;
@@ -136,7 +136,7 @@ class Level0ExitGateTest extends ExitGateSupport {
   }
 
   @Test
-  void theSameIdempotencyKeyWithADifferentBodyReturns422() {
+  void theSameIdempotencyKeyWithAnotherBodyReturns422() {
     long userId = Fixtures.insertUser(jdbc());
     LocalDate checkIn = LocalDate.of(2026, 12, 20);
     long roomTypeId = insertNights(userId, checkIn, 2, 5, 0);

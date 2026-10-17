@@ -82,7 +82,7 @@ class Level2ExitGateTest extends ExitGateSupport {
   }
 
   @Test
-  void aHoldPastHoldExpiresAtExpiresAndFreesTheRoom() throws Exception {
+  void holdPastHoldExpiresAtExpiresAndFreesTheRoom() throws Exception {
     long userId = Fixtures.insertUser(jdbc());
     long hotelId = Fixtures.insertHotel(jdbc(), userId);
     long roomTypeId = Fixtures.insertRoomType(jdbc(), hotelId);

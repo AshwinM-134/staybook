@@ -116,7 +116,7 @@ class Level3ExitGateTest extends ExitGateSupport {
   }
 
   @Test
-  void aSignedWebhookWhoseAmountDoesNotMatchTheBookingIsRejected() throws Exception {
+  void signedWebhookWithTheWrongAmountIsRejected() throws Exception {
     long bookingId = insertBooking("CONFIRMED_UNPAID", "mismatch-booking");
     long rupeesSentAsPaise = Fixtures.TOTAL_PRICE_PAISE / 100;
     String body = webhookBody(bookingId, "order_mismatch", "pay-mismatch", rupeesSentAsPaise);
