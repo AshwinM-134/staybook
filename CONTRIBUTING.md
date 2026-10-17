@@ -113,6 +113,11 @@ To turn a level on, add its tag to `-Dgroups`. For example,
 ### Exit-gate tags
 
 `level0` runs in CI and is expected to fail until the HTTP contract in
-the [README](README.md#http-contract) and `V1__init.sql` are in place.
+[`docs/levels.md`](docs/levels.md#http-contract) and `V1__init.sql` are
+in place.
 `level2` and `level3` are written and switched off. See CI for how to
 turn a level on.
+
+[`docs/levels.md`](docs/levels.md) is the level guide. It has what V1
+must contain, the test clock, the HTTP contract, and what each level
+checks.
