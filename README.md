@@ -367,7 +367,8 @@ of `ci.yml`.
   (`continue-on-error`). It stays red until the contract is
   implemented.
 
-Dependabot opens weekly updates for Maven, Docker, and GitHub Actions.
+Dependabot opens weekly updates for Maven, the images in
+`docker-compose.yml`, and GitHub Actions.
 
 The exit-gate command in the workflow is:
 
