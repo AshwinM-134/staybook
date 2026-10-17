@@ -84,10 +84,11 @@ The gateway (Razorpay or Stripe later, a mock for now) is an external system beh
 
 ## How we work
 
-- Ash writes all of the application code, including the schema in `V1__init.sql`.
 - Each level starts with a problem statement, `TODO`s, and exit-gate tests that fail until the level is solved. When they all pass, the level is cleared.
 - Exit-gate tests run against a real Postgres through Testcontainers, in GitHub Actions.
-- Work goes in through pull requests, reviewed before merge.
+
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the commit, pull request, and
+CI rules.
 
 ## Levels
 
@@ -271,11 +272,10 @@ A correctly signed webhook whose `amount` differs from the booking's
 leaves the booking status as it was. The level 3 gate sends `1500`,
 rupees mistaken for paise, against a booking of `150000`.
 
-### Exit-gate tags
+### Level 2 checks
 
-`level0` runs in CI and is expected to fail until this contract and
-`V1__init.sql` are in place. `level2` and `level3` are written and
-switched off. See CI for how to turn a level on.
+The tags that switch each level on are in
+[`CONTRIBUTING.md`](CONTRIBUTING.md#exit-gate-tags).
 
 Level 2 also checks 100 concurrent bookings of one night with
 `total = 5`: exactly 5 responses are `201`, the rest are `409`, and
@@ -333,84 +333,6 @@ Spotless. Format Java with:
 ```bash
 ./mvnw spotless:apply
 ```
-
-## CI
-
-`.github/workflows/ci.yml` runs on every pull request and on every push
-to `main`. `.github/workflows/pr-title.yml` runs when a pull request is
-opened, edited, synchronized, or reopened. The title check is not part
-of `ci.yml`.
-
-- `build` — Java 21, one `./mvnw verify`: tests against Testcontainers
-  Postgres, then PMD, Checkstyle (Google style), SpotBugs, Spotless
-  (`google-java-format`), and JaCoCo. Excludes `level0`, `level2`, and
-  `level3`. A test failure or a lint violation fails the job. Format
-  with `./mvnw spotless:apply`. On a pull request it posts the JaCoCo
-  report as a comment. There is no coverage threshold, and a failed
-  comment does not fail the job.
-- `java-quality` — runs after `build` and passes only if that verify
-  passed. It does not run Maven again. The `main` ruleset requires
-  this check name.
-- `megalinter` — YAML, Markdown, Dockerfile, Compose (as YAML), SQL,
-  shell, and GitHub Actions. Gitleaks 8.30.1 runs in this job after
-  `sha256sum` checks the downloaded tarball. Java linters are off here
-  because Maven already runs them.
-- `security` — CodeQL for Java. The job sets up Temurin 21, compiles
-  with Maven, and uploads the results.
-- `pr-title` — the pull request title follows the commit rules in
-  Contributing, without the exceptions for `Merge`, `Revert`,
-  `fixup!`, and `squash!` subjects. Squash merge makes the title the
-  commit on `main`, so the job does not lint the branch's commits.
-  Editing the title runs this check again.
-- `exit-gate` — enabled levels only. Today that is `level0`. The job
-  reports pass or fail and does not block the workflow
-  (`continue-on-error`). It stays red until the contract is
-  implemented.
-
-Dependabot opens weekly updates for Maven, the images in
-`docker-compose.yml`, and GitHub Actions. Their titles start with
-`chore(deps):`, so they pass `pr-title`.
-
-The exit-gate command in the workflow is:
-
-```bash
-./mvnw verify -Dgroups=level0 -DexcludedGroups=
-```
-
-To turn a level on, add its tag to `-Dgroups`. For example,
-`-Dgroups=level0,level2` also runs level 2.
-
-## Contributing
-
-Commits use Conventional Commits. The subject is `type: summary` or
-`type(scope): summary`. A `!` before the colon marks a breaking
-change, as in `feat!: summary`.
-
-The commit-msg hook also passes the subjects Git writes itself. Any
-line that starts with `Merge` and a space passes, including
-`Merge branch`, `Merge remote-tracking branch 'origin/main'`, and
-`Merge pull request #1`. `Revert "…"`, `fixup! …`, and `squash! …`
-pass as well. A pull request title does not get these exceptions.
-
-Types, and only these: `feat`, `fix`, `chore`, `ci`, `docs`, `test`,
-`refactor`.
-
-Scope is optional. When set, it is one of: `search`, `catalog`,
-`pricing`, `reviews`, `booking`, `inventory`, `payment`, `identity`,
-`ci`, `deps`, `docs`.
-
-Install the commit-msg hook with one command. It checks the subject
-before the commit exists:
-
-```bash
-git config core.hooksPath .githooks
-```
-
-Squash merge only. The pull request title becomes the commit on
-`main`, so the title must be `type: summary` or `type(scope): summary`.
-The `pr-title` check fails a title that starts with `Merge`,
-`Revert "`, `fixup!`, or `squash!`. To undo a change, title the pull
-request with a listed type, as in `fix: revert the booking timeout`.
 
 ## License
 
