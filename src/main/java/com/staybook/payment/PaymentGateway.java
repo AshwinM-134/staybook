@@ -9,10 +9,10 @@ public interface PaymentGateway {
   /**
    * Creates an order at the provider.
    *
-   * @param amountMinor amount in minor currency units
+   * @param amountPaise amount in integer paise, so ₹1500 is 150000
    * @param currency ISO-4217 currency code
    * @param receipt caller reference, typically the booking idempotency key
    * @return provider order id
    */
-  String createOrder(long amountMinor, String currency, String receipt);
+  String createOrder(long amountPaise, String currency, String receipt);
 }

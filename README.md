@@ -34,10 +34,12 @@ One Spring Boot app, one Postgres database, and a mock payment gateway running o
 | `room_type` | id, hotel_id → hotel, name, capacity |
 | `inventory` | room_type_id → room_type, date, total, reserved. Primary key (room_type_id, date), `reserved <= total` |
 | `rate` | room_type_id → room_type, date, price |
-| `booking` | id, user_id → users, room_type_id → room_type, check_in, check_out, guests, total_price, status, idempotency_key (unique), hold_expires_at, created_at |
-| `payment` | id, booking_id → booking, amount, payment_type, status, provider_ref (unique), idempotency_key, created_at |
+| `booking` | id, user_id → users, room_type_id → room_type, check_in, check_out, guests, total_price_paise, status, idempotency_key (unique), hold_expires_at, created_at |
+| `payment` | id, booking_id → booking, amount_paise, payment_type, status, provider_ref (unique), idempotency_key, created_at |
 
 Booking status is one of `HELD`, `CONFIRMED_UNPAID`, `PAID`, `CANCELLED`, `EXPIRED`. One booking can have many payments, because a failed attempt can be retried.
+
+Money is integer paise, never a decimal. `booking.total_price_paise` and `payment.amount_paise` are `bigint`. ₹1500 is `150000`.
 
 Reviews and amenities (`review`, `amenity`, `hotel_amenity`) come in at level 1.
 
@@ -190,7 +192,7 @@ mock is WireMock. Compose publishes it on host port `8089`.
 The app reads `staybook.payment.gateway-base-url` (default
 `http://localhost:8089`) and creates an order with
 `POST {that url}/v1/orders` after the inventory transaction has
-committed. A gateway error does not roll back a hold that already
+committed. `PaymentGateway.createOrder` takes the amount in paise. A gateway error does not roll back a hold that already
 committed. The booking response may wait on the gateway. The inventory
 row lock must not.
 
@@ -220,11 +222,13 @@ start without that variable.
 {
   "providerRef": "order_123",
   "bookingId": 1,
-  "amount": 1500,
+  "amount": 150000,
   "paymentType": "card",
   "idempotencyKey": "pay-1"
 }
 ```
+
+`amount` is paise, so `150000` is ₹1500.
 
 A valid signature returns `200`. The same signed body, including five
 deliveries at once, leaves one `payment` row for that `providerRef`

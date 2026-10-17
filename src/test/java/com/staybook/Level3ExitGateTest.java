@@ -200,10 +200,10 @@ class Level3ExitGateTest extends ExitGateSupport {
 
   private static String webhookBody(long bookingId, String providerRef, String idempotencyKey) {
     return """
-        {"providerRef":"%s","bookingId":%d,"amount":1500,\
+        {"providerRef":"%s","bookingId":%d,"amount":%d,\
         "paymentType":"card","idempotencyKey":"%s"}\
         """
-        .formatted(providerRef, bookingId, idempotencyKey);
+        .formatted(providerRef, bookingId, Fixtures.TOTAL_PRICE_PAISE, idempotencyKey);
   }
 
   private static String sign(String body) {

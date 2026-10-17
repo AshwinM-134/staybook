@@ -1,6 +1,5 @@
 package com.staybook;
 
-import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.Instant;
@@ -10,6 +9,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 /** Inserts and truncates rows. Schema lives in V1__init.sql. A missing table fails the test. */
 final class Fixtures {
+
+  static final long TOTAL_PRICE_PAISE = 150_000L;
 
   private Fixtures() {}
 
@@ -91,7 +92,7 @@ final class Fixtures {
     Long id =
         jdbc.queryForObject(
             "insert into booking (user_id, room_type_id, check_in, check_out, guests,"
-                + " total_price, status, idempotency_key, hold_expires_at, created_at)"
+                + " total_price_paise, status, idempotency_key, hold_expires_at, created_at)"
                 + " values (?, ?, ?, ?, ?, ?, ?, ?, ?, now()) returning id",
             Long.class,
             userId,
@@ -99,7 +100,7 @@ final class Fixtures {
             Date.valueOf(checkIn),
             Date.valueOf(checkOut),
             2,
-            new BigDecimal("1500.00"),
+            TOTAL_PRICE_PAISE,
             status,
             idempotencyKey,
             Timestamp.from(Instant.parse("2026-12-20T12:00:00Z")));
