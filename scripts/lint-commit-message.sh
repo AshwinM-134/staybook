@@ -3,7 +3,7 @@
 # Subject: type: summary
 #      or: type(scope): summary
 #      or: either form with ! before the colon for a breaking change
-# Git's own subjects pass as written: Merge branch ..., Revert "...",
+# Git's own subjects pass as written: Merge ..., Revert "...",
 # fixup! ..., and squash! ...
 
 set -euo pipefail
@@ -36,7 +36,7 @@ else
 fi
 
 conventional="^(${types})(\\((${scopes})\\))?!?: [^[:space:]].*$"
-git_generated='^(Merge branch .+|Revert ".+"|(fixup|squash)! .+)$'
+git_generated='^(Merge .+|Revert ".+"|(fixup|squash)! .+)$'
 if [[ ! "${subject}" =~ ${conventional} && ! "${subject}" =~ ${git_generated} ]]; then
   echo "Commit subject is not a conventional commit." >&2
   echo "Use: type: summary" >&2
@@ -44,7 +44,7 @@ if [[ ! "${subject}" =~ ${conventional} && ! "${subject}" =~ ${git_generated} ]]
   echo " or: type!: summary for a breaking change" >&2
   echo "types: feat, fix, chore, ci, docs, test, refactor" >&2
   echo "scopes (optional): search, catalog, pricing, reviews, booking, inventory, payment, identity, ci, deps, docs" >&2
-  echo "Git subjects also pass: Merge branch ..., Revert \"...\", fixup! ..., squash! ..." >&2
+  echo "Git subjects also pass: Merge ..., Revert \"...\", fixup! ..., squash! ..." >&2
   echo "got: ${subject}" >&2
   exit 1
 fi

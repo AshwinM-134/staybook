@@ -368,8 +368,10 @@ To turn a level on, add its tag to `-Dgroups`. For example,
 
 Commits use Conventional Commits. The subject is `type: summary` or
 `type(scope): summary`. A `!` before the colon marks a breaking
-change, as in `feat!: summary`. Subjects that git writes also pass:
-`Merge branch …`, `Revert "…"`, `fixup! …`, and `squash! …`.
+change, as in `feat!: summary`. These subjects also pass. Any line
+that starts with `Merge ` passes, including `Merge branch`, `Merge
+remote-tracking branch 'origin/main'`, and `Merge pull request #1`.
+`Revert "…"`, `fixup! …`, and `squash! …` pass as well.
 
 Types, and only these: `feat`, `fix`, `chore`, `ci`, `docs`, `test`,
 `refactor`.
