@@ -326,8 +326,10 @@ Spotless. Format Java with:
 
 ## CI
 
-One workflow, `.github/workflows/ci.yml`, runs on every pull request
-and every push. `pr-title` is pull-request only.
+`.github/workflows/ci.yml` runs on every pull request and on every push
+to `main`. `.github/workflows/pr-title.yml` runs when a pull request is
+opened, edited, synchronized, or reopened. The title check is not part
+of `ci.yml`.
 
 - `build` — Java 21, `./mvnw verify`, Testcontainers Postgres. Excludes
   `level0`, `level2`, and `level3`.
@@ -344,7 +346,8 @@ and every push. `pr-title` is pull-request only.
   with Maven, and uploads the results.
 - `pr-title` — the pull request title follows the commit rules in
   Contributing. Squash merge makes the title the commit on `main`, so
-  the job does not lint the branch's commits.
+  the job does not lint the branch's commits. Editing the title runs
+  this check again.
 - `exit-gate` — enabled levels only. Today that is `level0`. The job
   reports pass or fail and does not block the workflow
   (`continue-on-error`). It stays red until the contract is
