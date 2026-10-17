@@ -1,0 +1,11 @@
+title = "staybook"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Local Compose database password and the documented test webhook secret"
+paths = [
+  '''docker-compose\.yml''',
+  '''src/main/resources/application\.yml''',
+]

@@ -1,0 +1,19 @@
+---
+# Java linters stay off. Maven already runs them in java-quality:
+# JAVA_CHECKSTYLE and JAVA_PMD (the only Java linters in MegaLinter v10).
+# SpotBugs is not shipped by MegaLinter v10; Maven runs it too.
+# REPOSITORY_GITLEAKS was removed in v10. The workflow runs gitleaks itself.
+ENABLE_LINTERS:
+  - ACTION_ACTIONLINT
+  - MARKDOWN_MARKDOWNLINT
+  - YAML_YAMLLINT
+  - SQL_SQLFLUFF
+  - DOCKERFILE_HADOLINT
+  - BASH_SHELLCHECK
+
+FILTER_REGEX_EXCLUDE: "(docs/architecture/.*|.*\\.tldr$)"
+# The Maven wrapper is generated. Do not restyle it.
+BASH_SHELLCHECK_FILTER_REGEX_EXCLUDE: "(^mvnw$|^mvnw\\.cmd$)"
+VALIDATE_ALL_CODEBASE: true
+SHOW_ELAPSED_TIME: true
+PRINT_ALPACA: false

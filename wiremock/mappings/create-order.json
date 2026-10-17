@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/v1/orders"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "jsonBody": {
+      "id": "order_test",
+      "status": "created"
+    }
+  }
+}

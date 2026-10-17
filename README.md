@@ -75,3 +75,265 @@ Levels 0 to 4 run locally on Docker Compose. The rough order:
 3. **Level 2:** concurrency. No overbooking under parallel load, idempotent booking, and a consistency check that recounts `reserved` from bookings.
 4. **Level 3:** reliable payments with an outbox.
 5. **Later:** caching, search with Elasticsearch, splitting into services, load balancing, and whatever problem shows up next.
+
+## HTTP contract
+
+Level 0 clients talk to one app. The exit-gate tests call the paths
+below and nothing else, so they compile before those modules exist.
+They fail at runtime until this contract holds.
+
+Dates are `YYYY-MM-DD`. A stay covers `checkIn` inclusive and
+`checkOut` exclusive, the same window as the hold statement above.
+
+Primary keys are `bigint`. A fixture insert omits `id` and reads it
+back with `RETURNING id`. `inventory` has no surrogate id. Its primary
+key is `(room_type_id, date)`.
+
+### Hotels
+
+`POST /api/hotels` with:
+
+```json
+{
+  "ownerId": 1,
+  "name": "Harbor",
+  "city": "Kochi",
+  "address": "1 Beach Road"
+}
+```
+
+`201` returns `id`, `ownerId`, `name`, `city`, and `address`.
+
+`GET /api/hotels/{id}` returns that object, or `404`.
+
+`PUT /api/hotels/{id}` with the same fields returns `200`, or `404`.
+
+`DELETE /api/hotels/{id}` returns `204`, or `404`.
+
+### Room types
+
+`POST /api/room-types` with:
+
+```json
+{
+  "hotelId": 1,
+  "name": "Deluxe",
+  "capacity": 2
+}
+```
+
+`201` returns `id`, `hotelId`, `name`, and `capacity`.
+
+`GET /api/room-types/{id}` returns that object, or `404`.
+
+`PUT /api/room-types/{id}` returns `200`, or `404`.
+
+`DELETE /api/room-types/{id}` returns `204`, or `404`.
+
+### Holds
+
+`POST /api/bookings` with:
+
+```json
+{
+  "userId": 1,
+  "roomTypeId": 1,
+  "checkIn": "2026-12-20",
+  "checkOut": "2026-12-23",
+  "guests": 2,
+  "idempotencyKey": "guest-1"
+}
+```
+
+That sample is three nights: 20, 21, and 22 December.
+
+The `inventory` rows for those nights must already exist. The hold does
+not insert them. It runs the update in "Holding a room". When the
+number of updated rows equals the number of nights, insert one
+`booking` with status `HELD` and commit. Otherwise roll back and return
+`409`. A `409` leaves every night's `reserved` unchanged.
+
+`201` body:
+
+```json
+{
+  "id": 10,
+  "userId": 1,
+  "roomTypeId": 1,
+  "checkIn": "2026-12-20",
+  "checkOut": "2026-12-23",
+  "guests": 2,
+  "status": "HELD",
+  "idempotencyKey": "guest-1"
+}
+```
+
+The same `idempotencyKey` sent again returns `201` with the same `id`.
+It does not insert a second booking, and it does not increment
+`reserved` again. Ten concurrent calls with one key do the same: one
+booking row, one increment, and that same id on every response.
+
+`POST /api/bookings/{id}/release` returns `204`. It subtracts 1 from
+`reserved` on every night that booking covered.
+
+### Check constraint
+
+`inventory.reserved` cannot exceed `inventory.total`. The database
+rejects that row with a check constraint. The level 0 gate inserts one
+and expects SQLSTATE `23514`.
+
+### Gateway and webhook
+
+`PaymentGateway` is the boundary. This repo does not implement it. The
+mock is WireMock. Compose publishes it on host port `8089`.
+
+The app reads `staybook.payment.gateway-base-url` (default
+`http://localhost:8089`) and creates an order with
+`POST {that url}/v1/orders` after the inventory transaction has
+committed. A gateway error does not roll back a hold that already
+committed. The booking response may wait on the gateway. The inventory
+row lock must not.
+
+Two overlapping bookings, `total = 2`, same room type and dates, while
+that order call sleeps for 5 seconds: both transactions commit within a
+second, `reserved` ends at 2, and the gateway is called once per
+booking.
+
+Test-only header, which a real client never sends:
+
+`X-Staybook-Call-Gateway-Inside-Transaction: true`
+
+With that header, the gateway call runs inside the inventory
+transaction, before commit. The level 3 control sets it on the first of
+two overlapping bookings and expects `reserved` to still be below 2 one
+second later.
+
+Webhook: `POST /api/payments/webhook`.
+
+`X-Payment-Signature` is the lowercase hex HMAC-SHA256 of the raw
+request body. The key is `staybook.payment.webhook-secret`. The default
+in `application.yml` is `test-webhook-secret`.
+
+```json
+{
+  "providerRef": "order_123",
+  "bookingId": 1,
+  "amount": 1500,
+  "paymentType": "card",
+  "idempotencyKey": "pay-1"
+}
+```
+
+A valid signature returns `200`. The same signed body, including five
+deliveries at once, leaves one `payment` row for that `providerRef`
+with status `PAID`, and moves the booking to `PAID`. Every response is
+`200`. The level 3 fixture starts the booking at `CONFIRMED_UNPAID`.
+
+A bad signature returns `401`. The booking status stays as it was, and
+no payment row is written.
+
+### Exit-gate tags
+
+`level0` runs in CI and is expected to fail until this contract and
+`V1__init.sql` are in place. `level2` and `level3` are written and
+switched off. See CI for how to turn a level on.
+
+Level 2 also checks 100 concurrent bookings of one night with
+`total = 5`: exactly 5 responses are `201`, the rest are `409`, and
+`reserved` is 5.
+
+## Running locally
+
+Start Postgres and the mock gateway:
+
+```bash
+docker compose up -d
+```
+
+Run the app against that Postgres:
+
+```bash
+./mvnw spring-boot:run
+```
+
+Flyway applies `V1__init.sql` on startup. That file is a comment until
+the schema is written.
+
+Default tests, linters, and formatter check:
+
+```bash
+./mvnw verify
+```
+
+The smoke test boots Spring against Postgres via Testcontainers. Tags
+`level0`, `level2`, and `level3` are excluded, so this stays green.
+
+Run one level on its own. Level 0 fails until the contract above is
+implemented:
+
+```bash
+./mvnw verify -Dgroups=level0 -DexcludedGroups=
+```
+
+`./mvnw verify` runs PMD, Checkstyle (Google style), SpotBugs, and
+Spotless. Format Java with:
+
+```bash
+./mvnw spotless:apply
+```
+
+## CI
+
+One workflow, `.github/workflows/ci.yml`, runs on every pull request
+and every push. `pr-title` is pull-request only.
+
+- `build` — Java 21, `./mvnw verify`, Testcontainers Postgres. Excludes
+  `level0`, `level2`, and `level3`.
+- `java-quality` — PMD, Checkstyle (Google style), SpotBugs, and
+  Spotless (`google-java-format`). A violation fails the job. Format
+  with `./mvnw spotless:apply`.
+- `megalinter` — YAML, Markdown, Dockerfile, Compose (as YAML), SQL,
+  shell, and GitHub Actions. Gitleaks runs in this job. Java linters
+  are off here because Maven already runs them.
+- `coverage` — JaCoCo report, posted on the pull request. No coverage
+  threshold, so the number does not fail the job.
+- `security` — CodeQL for Java.
+- `pr-title` — title and each commit use `type: summary` or
+  `type(scope): summary`. Scope is optional.
+- `exit-gate` — enabled levels only. Today that is `level0`. The job
+  reports pass or fail and does not block the workflow
+  (`continue-on-error`). It stays red until the contract is
+  implemented.
+
+Dependabot opens weekly updates for Maven, Docker, and GitHub Actions.
+
+The exit-gate command in the workflow is:
+
+```bash
+./mvnw verify -Dgroups=level0 -DexcludedGroups=
+```
+
+To turn a level on, add its tag to `-Dgroups`. For example,
+`-Dgroups=level0,level2` also runs level 2.
+
+## Contributing
+
+Commits use Conventional Commits. The subject is `type: summary` or
+`type(scope): summary`.
+
+Types, and only these: `feat`, `fix`, `chore`, `ci`, `docs`, `test`,
+`refactor`.
+
+Scope is optional. When set, it is one of: `search`, `catalog`,
+`pricing`, `reviews`, `booking`, `inventory`, `payment`, `identity`,
+`ci`, `deps`, `docs`.
+
+Install the commit-msg hook with one command. It checks the subject
+before the commit exists:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Squash merge only. The pull request title becomes the commit on
+`main`, so the title follows the same rules.
