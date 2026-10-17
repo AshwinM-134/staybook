@@ -212,21 +212,23 @@ mock is WireMock. Compose publishes it on host port `8089`.
 The app reads `staybook.payment.gateway-base-url` (default
 `http://localhost:8089`) and creates an order with
 `POST {that url}/v1/orders` after the inventory transaction has
-committed. `PaymentGateway.createOrder` takes the amount in paise. A gateway error does not roll back a hold that already
-committed. The booking response may wait on the gateway. The inventory
-row lock must not.
+committed. `PaymentGateway.createOrder` takes the amount in paise. A
+gateway error does not roll back a hold that already committed. The
+booking response may wait on the gateway. The inventory row lock must
+not.
 
 Two overlapping bookings use `total = 2` and the same room type and
 dates. The order call sleeps for 5 seconds. Both transactions commit
 within a second. `reserved` ends at 2. The gateway is called once per
 booking.
 
-The level 3 control proves that check can fail. Its first booking goes
-through a test-only booking service, a `@TestConfiguration` bean in
-`Level3ExitGateTest`, that calls the gateway inside the inventory
-transaction. Its second booking goes through the app. One second later,
-`reserved` is still below 2. The app has no such mode. No header,
-parameter, or setting makes it call the gateway before commit.
+The level 3 control shows that the one-second check catches a lock held
+across the gateway call. Its first booking goes through a test-only
+booking service, a `@TestConfiguration` bean in `Level3ExitGateTest`,
+that calls the gateway inside the inventory transaction. Its second
+booking goes through the app. One second later, `reserved` is still
+below 2. The app has no such mode. No header, parameter, or setting
+makes it call the gateway before commit.
 
 Webhook: `POST /api/payments/webhook`.
 
