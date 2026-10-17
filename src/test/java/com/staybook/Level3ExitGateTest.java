@@ -10,10 +10,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.github.tomakehurst.wiremock.WireMockServer;
+import com.staybook.payment.PaymentGateway;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.sql.Date;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
@@ -29,10 +32,15 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Tag("level3")
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
@@ -43,6 +51,8 @@ class Level3ExitGateTest extends ExitGateSupport {
   private static final String ORDERS = "/v1/orders";
 
   private static WireMockServer wireMock;
+
+  @Autowired private GatewayInsideTransactionBooking gatewayInsideTransaction;
 
   @DynamicPropertySource
   static void properties(DynamicPropertyRegistry registry) {
@@ -142,15 +152,11 @@ class Level3ExitGateTest extends ExitGateSupport {
     openTheConnectionPool();
     wireMock.resetRequests();
     try (ExecutorService pool = Executors.newFixedThreadPool(2)) {
-      Future<HttpResponse> first =
+      Future<?> first =
           pool.submit(
               () ->
-                  postBookingCallingGatewayInsideTheTransaction(
-                      stay.userId(),
-                      stay.roomTypeId(),
-                      stay.night(),
-                      stay.night().plusDays(1),
-                      "ctrl-1"));
+                  gatewayInsideTransaction.hold(
+                      stay.roomTypeId(), stay.night(), stay.night().plusDays(1), "ctrl-1"));
       Future<HttpResponse> second =
           pool.submit(
               () ->
@@ -161,7 +167,7 @@ class Level3ExitGateTest extends ExitGateSupport {
                       stay.night().plusDays(1),
                       "ctrl-2"));
       assertFalse(reservedReaches(stay, 2, Duration.ofSeconds(1)));
-      assertEquals(201, first.get(20, TimeUnit.SECONDS).status());
+      first.get(20, TimeUnit.SECONDS);
       assertEquals(201, second.get(20, TimeUnit.SECONDS).status());
     }
     assertEquals(2, Fixtures.reserved(jdbc(), stay.roomTypeId(), stay.night()));
@@ -235,4 +241,47 @@ class Level3ExitGateTest extends ExitGateSupport {
   }
 
   private record NightStay(long userId, long roomTypeId, LocalDate night) {}
+
+  /** The wrong way to book. The gateway call runs while the inventory row lock is held. */
+  static final class GatewayInsideTransactionBooking {
+
+    private final JdbcTemplate jdbc;
+    private final TransactionTemplate transactions;
+    private final PaymentGateway gateway;
+
+    GatewayInsideTransactionBooking(
+        JdbcTemplate jdbc, TransactionTemplate transactions, PaymentGateway gateway) {
+      this.jdbc = jdbc;
+      this.transactions = transactions;
+      this.gateway = gateway;
+    }
+
+    void hold(long roomTypeId, LocalDate checkIn, LocalDate checkOut, String idempotencyKey) {
+      long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
+      transactions.executeWithoutResult(
+          status -> {
+            int held =
+                jdbc.update(
+                    "update inventory set reserved = reserved + 1 where room_type_id = ?"
+                        + " and date >= ? and date < ? and reserved < total",
+                    roomTypeId,
+                    Date.valueOf(checkIn),
+                    Date.valueOf(checkOut));
+            if (held != nights) {
+              throw new IllegalStateException("no room for " + idempotencyKey);
+            }
+            gateway.createOrder(Fixtures.TOTAL_PRICE_PAISE, "INR", idempotencyKey);
+          });
+    }
+  }
+
+  @TestConfiguration(proxyBeanMethods = false)
+  static class GatewayInsideTransactionConfiguration {
+
+    @Bean
+    GatewayInsideTransactionBooking gatewayInsideTransactionBooking(
+        JdbcTemplate jdbc, TransactionTemplate transactions, PaymentGateway gateway) {
+      return new GatewayInsideTransactionBooking(jdbc, transactions, gateway);
+    }
+  }
 }

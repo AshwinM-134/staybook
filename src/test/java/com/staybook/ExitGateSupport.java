@@ -60,16 +60,6 @@ class ExitGateSupport {
         bookingJson(userId, roomTypeId, checkIn, checkOut, idempotencyKey));
   }
 
-  final HttpResponse postBookingCallingGatewayInsideTheTransaction(
-      long userId, long roomTypeId, LocalDate checkIn, LocalDate checkOut, String idempotencyKey) {
-    RequestBodySpec spec =
-        client
-            .post()
-            .uri("/api/bookings")
-            .header("X-Staybook-Call-Gateway-Inside-Transaction", "true");
-    return exchange(spec, bookingJson(userId, roomTypeId, checkIn, checkOut, idempotencyKey));
-  }
-
   final HttpResponse postWebhook(String json, String signature) {
     var result =
         client

@@ -201,14 +201,12 @@ dates. The order call sleeps for 5 seconds. Both transactions commit
 within a second. `reserved` ends at 2. The gateway is called once per
 booking.
 
-Test-only header, which a real client never sends:
-
-`X-Staybook-Call-Gateway-Inside-Transaction: true`
-
-With that header, the gateway call runs inside the inventory
-transaction, before commit. The level 3 control sets it on the first of
-two overlapping bookings and expects `reserved` to still be below 2 one
-second later.
+The level 3 control proves that check can fail. Its first booking goes
+through a test-only booking service, a `@TestConfiguration` bean in
+`Level3ExitGateTest`, that calls the gateway inside the inventory
+transaction. Its second booking goes through the app. One second later,
+`reserved` is still below 2. The app has no such mode. No header,
+parameter, or setting makes it call the gateway before commit.
 
 Webhook: `POST /api/payments/webhook`.
 
