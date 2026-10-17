@@ -211,8 +211,10 @@ second later.
 Webhook: `POST /api/payments/webhook`.
 
 `X-Payment-Signature` is the lowercase hex HMAC-SHA256 of the raw
-request body. The key is `staybook.payment.webhook-secret`. The default
-in `application.yml` is `test-webhook-secret`.
+request body. The key is `staybook.payment.webhook-secret`. The `dev`
+and `test` profiles use `test-webhook-secret` when
+`STAYBOOK_PAYMENT_WEBHOOK_SECRET` is unset. Any other profile does not
+start without that variable.
 
 ```json
 {
@@ -250,10 +252,13 @@ Start Postgres and the mock gateway:
 docker compose up -d
 ```
 
-Run the app against that Postgres:
+Run the app against that Postgres with the `dev` profile. The database
+password is `DB_PASSWORD`, or `staybook` when that variable is unset.
+The `dev` profile uses `test-webhook-secret` unless
+`STAYBOOK_PAYMENT_WEBHOOK_SECRET` is set:
 
 ```bash
-./mvnw spring-boot:run
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
 ```
 
 Flyway applies `V1__init.sql` on startup. That file is a comment until
