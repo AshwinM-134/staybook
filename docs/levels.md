@@ -5,6 +5,10 @@ Level 0 is one Spring Boot app and one Postgres database. Later levels add concu
 The level 0 architecture is in [`architecture/level-0.md`](architecture/level-0.md),
 and the data model is in [`architecture/data-model.md`](architecture/data-model.md).
 
+Before you write `V1__init.sql` or any Java, read
+[`learn/level-0-first-setup.md`](learn/level-0-first-setup.md). It lists
+the order of work and the Spring Boot pieces that level 0 uses.
+
 ## Level 0: the monolith
 
 One Spring Boot app, one Postgres database, and a mock payment gateway running outside the app.
